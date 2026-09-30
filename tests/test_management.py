@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from my_tools.core import Manager, ToolError, ROOT, atomic_json, checked, project_root, setup, uninstall_launcher
+from my_tools.core import Manager, ToolError, ROOT, atomic_json, checked, project_config, project_root, setup, uninstall_launcher
 from my_tools import cli
 from my_tools.siftr import command
 
@@ -293,6 +293,37 @@ class Offline(unittest.TestCase):
             for pattern in ("", " ", "/private/*", "../*", "src/../*", "src\n*"):
                 self.assertEqual(self.invoke("search", "question", "--glob", pattern)[0], 2)
             operation.assert_not_called()
+
+    def test_saved_scope_is_default_and_cannot_be_widened_by_search(self):
+        self.manager.install("siftr")
+        self.invoke("init")
+        self.assertEqual(self.invoke("enable", "search", "--allow-remote", "--glob", "src/*.ts", "--glob", "tests/*.ts")[0], 0)
+        with patch("my_tools.siftr.search", return_value=0) as operation:
+            self.assertEqual(self.invoke("search", "question")[0], 0)
+            self.assertEqual(operation.call_args.kwargs["globs"], ["src/*.ts", "tests/*.ts"])
+            self.assertEqual(self.invoke("search", "question", "--glob", "tests/*.ts")[0], 0)
+            self.assertEqual(operation.call_args.kwargs["globs"], ["tests/*.ts"])
+            operation.reset_mock()
+            self.assertEqual(self.invoke("search", "question", "--glob", "*")[0], 2)
+            operation.assert_not_called()
+        self.invoke("disable", "search")
+        self.invoke("enable", "search", "--allow-remote")
+        self.assertEqual(project_config(self.project)["capabilities"]["search"]["globs"], ["src/*.ts", "tests/*.ts"])
+
+    def test_invalid_saved_scopes_fail_before_runtime_and_preserve_config(self):
+        self.invoke("init")
+        before = (self.project / ".my-tools.json").read_bytes()
+        with patch.object(self.manager, "resolve") as resolve:
+            self.assertEqual(self.invoke("enable", "search", "--allow-remote", "--glob", "../*")[0], 2)
+            resolve.assert_not_called()
+        self.assertEqual((self.project / ".my-tools.json").read_bytes(), before)
+        for globs in ([], "src/*.ts", [None], ["/private/*"], ["src/../*"], ["\\private\\*"]):
+            atomic_json(self.project / ".my-tools.json", {"schema_version": 1, "capabilities": {
+                "search": {"provider": "siftr", "version": "approved", "enabled": True,
+                           "allow_remote_data": True, "globs": globs}}})
+            with patch("my_tools.siftr.search") as operation:
+                self.assertEqual(self.invoke("search", "question")[0], 2)
+                operation.assert_not_called()
 
     def test_update_all_pending_exit_and_accept_all_rejected(self):
         self.manager.install("siftr")

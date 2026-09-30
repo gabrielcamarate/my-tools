@@ -7,7 +7,7 @@ import sys
 
 from . import __version__
 from .core import (Manager, ToolError, atomic_json, project_config, project_root,
-                   setup, uninstall_launcher)
+                   setup, uninstall_launcher, validate_globs)
 
 
 def parser():
@@ -28,6 +28,7 @@ def parser():
     sub.add_argument("--provider", choices=["siftr"], default="siftr")
     sub.add_argument("--allow-remote", action="store_true")
     sub.add_argument("--pin", default="approved", help="approved ou SHA completo instalado")
+    sub.add_argument("--glob", action="append", help="Salvar escopo de arquivos permitido; repetível")
     sub = commands.add_parser("disable")
     sub.add_argument("capability", choices=["search"])
     sub = commands.add_parser("install")
@@ -110,9 +111,15 @@ def main(argv=None):
         elif args.command in ("enable", "disable"):
             config = project_config(root)
             if args.command == "enable":
+                previous = config["capabilities"].get(args.capability, {})
+                globs = args.glob if args.glob is not None else previous.get("globs")
+                if globs is not None:
+                    validate_globs(globs)
                 manager.resolve(args.provider, args.pin)
                 config["capabilities"][args.capability] = {"provider": args.provider, "version": args.pin,
                      "enabled": True, "allow_remote_data": args.allow_remote}
+                if globs is not None:
+                    config["capabilities"][args.capability]["globs"] = globs
             elif args.capability in config["capabilities"]:
                 config["capabilities"][args.capability]["enabled"] = False
                 config["capabilities"][args.capability]["allow_remote_data"] = False
@@ -121,21 +128,23 @@ def main(argv=None):
         elif args.command == "search":
             if not args.query.strip() or args.query.startswith("-") or not 1 <= args.top <= 100:
                 raise ToolError("Consulta vazia/opção ou top fora de 1..100")
-            if args.glob and any(not pattern.strip() or pattern.startswith(("-", "/"))
-                                 or ".." in pattern.replace("\\", "/").split("/")
-                                 or any(c in pattern for c in ("\n", "\r", "\x00")) for pattern in args.glob):
-                raise ToolError("Use globs relativos, não vazios e sem travessia de diretórios")
+            if args.glob is not None:
+                validate_globs(args.glob)
             config = project_config(root)
             entry = config["capabilities"].get("search", {})
             if not entry.get("enabled"):
                 raise ToolError("Busca desabilitada neste projeto")
             if not entry.get("allow_remote_data"):
                 raise ToolError("Envio remoto não habilitado para este projeto; reveja o escopo antes de enable --allow-remote")
+            globs = entry.get("globs")
+            if globs is not None and args.glob is not None and not set(args.glob) <= set(globs):
+                raise ToolError("Busca não pode ampliar o escopo salvo; selecione padrões já configurados")
+            selected_globs = args.glob if args.glob is not None else globs
             path = manager.resolve(entry["provider"], entry["version"])
             from .credentials import effective
             env, _ = effective(manager.home)
             from .siftr import search
-            return search(path, root, args.query, args.top, args.json, args.stats, env=env, globs=args.glob)
+            return search(path, root, args.query, args.top, args.json, args.stats, env=env, globs=selected_globs)
         else:
             names = list(manager.tools) if getattr(args, "all", False) else [args.tool]
             if getattr(args, "accept", None) and getattr(args, "all", False):

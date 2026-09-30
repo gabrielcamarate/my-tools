@@ -66,7 +66,7 @@ Dentro da raiz ou de um subdiretório do projeto:
 
 ```bash
 my-tools init --profile search-experimental
-my-tools enable search --provider siftr --allow-remote
+my-tools enable search --provider siftr --allow-remote --glob 'src/*.ts'
 my-tools search "onde o cancelamento é processado?" --json --stats
 my-tools search "onde o cancelamento é processado?" --glob 'src/*.ts' --top 5 --json --stats
 my-tools disable search
@@ -79,12 +79,16 @@ Não use como autorização para enviar código de terceiros/clientes sem permis
 
 `--glob` limita os arquivos elegíveis antes do ranking e pode ser repetido.
 Os padrões são relativos à raiz; `src/*.ts` também alcança subdiretórios no
-matching do Siftr. Sem esse argumento, a busca mantém o escopo upstream padrão.
+matching do Siftr. No `enable`, os padrões ficam salvos e são aplicados a cada busca. Quando existe
+escopo salvo, `search --glob` só pode selecionar padrões exatamente iguais aos
+configurados, incluindo um subconjunto; outros padrões são recusados antes da
+chamada remota. Disable/re-enable preserva o escopo. Configurações antigas sem
+`globs` mantêm o padrão upstream, mas a integração nas skills exige escopo salvo.
 O filtro não identifica segredos dentro do código. Use uma cópia saneada quando
 o checkout misturar código com dados privados. `--top 5` limita resultados,
 mas não limita sozinho todos os arquivos examinados ou enviados.
 
-A configuração `.my-tools.json` contém provider, versão, enabled e allow_remote_data.
+A configuração `.my-tools.json` contém provider, versão, enabled, allow_remote_data e, opcionalmente, globs.
 Ela não pode conter credenciais. Por padrão, `version: approved` acompanha a versão
 ativa aceita localmente. `enable search --pin SHA_COMPLETO --allow-remote` fixa uma
 versão instalada e aceita, isolando o projeto de atualizações futuras.

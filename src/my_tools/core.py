@@ -282,6 +282,18 @@ def project_root(start):
     return here
 
 
+def validate_globs(patterns):
+    if not isinstance(patterns, list) or not patterns or any(
+        not isinstance(pattern, str) or not pattern.strip()
+        or pattern.startswith(("-", "/", "\\"))
+        or ".." in pattern.replace("\\", "/").split("/")
+        or any(c in pattern for c in ("\n", "\r", "\x00"))
+        for pattern in patterns
+    ):
+        raise ToolError("Use uma lista não vazia de globs relativos e sem travessia de diretórios")
+    return patterns
+
+
 def project_config(root):
     path = Path(root) / ".my-tools.json"
     if path.is_symlink():
@@ -295,8 +307,11 @@ def project_config(root):
     for entry in capabilities.values():
         if not isinstance(entry, dict) or entry.get("provider") != "siftr":
             raise ToolError("Provider inválido")
-        if set(entry) != {"provider", "version", "enabled", "allow_remote_data"}:
+        required = {"provider", "version", "enabled", "allow_remote_data"}
+        if not required <= set(entry) or set(entry) - required - {"globs"}:
             raise ToolError("Configuração da capacidade contém campos desconhecidos")
+        if "globs" in entry:
+            validate_globs(entry["globs"])
         if type(entry.get("enabled")) is not bool or type(entry.get("allow_remote_data")) is not bool:
             raise ToolError("enabled e allow_remote_data precisam ser booleanos")
         version = entry.get("version")

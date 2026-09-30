@@ -7,7 +7,7 @@ um resultado relevante não prova que o caminho esteja ativo.
 
 ```bash
 my-tools --project /caminho/do/projeto init --profile search-experimental
-my-tools --project /caminho/do/projeto enable search --provider siftr --allow-remote
+my-tools --project /caminho/do/projeto enable search --provider siftr --allow-remote --glob 'src/*.ts' --glob 'tests/*.ts'
 my-tools --project /caminho/do/projeto status
 ```
 
@@ -30,6 +30,9 @@ my-tools --project /caminho/do/projeto search \
   'onde tratamos uma tentativa repetida de executar a mesma operação?' \
   --glob 'src/*.ts' --glob 'tests/*.ts' --top 5 --json --stats
 ```
+
+Os padrões salvos são usados mesmo sem `--glob` na busca. Uma busca pode selecionar
+apenas um subconjunto exato deles, sem ampliar o escopo.
 
 Globs do Siftr usam matching de caminhos; `src/*.ts` inclui .ts aninhados.
 Eles não removem dados privados dentro de um arquivo elegível. Em checkouts com
