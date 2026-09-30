@@ -79,7 +79,7 @@ def check(path, spec, commit, smoke=True):
     with tempfile.TemporaryDirectory(prefix="my-tools-offline-") as temporary:
         env = offline_env(temporary)
         help_text = checked(command(path, ["search", "--help"]), cwd=temporary, env=env, timeout=30)
-        if not all(word in help_text for word in ("query", "--json", "--top")):
+        if not all(word in help_text for word in ("query", "--json", "--top", "--glob")):
             raise ToolError("Contrato do comando search mudou")
         checked(command(path, ["--version"]), cwd=temporary, env=env, timeout=30)
         # Disable Python socket transports before loading upstream tests. This is
@@ -98,8 +98,10 @@ runpy.run_module("unittest", run_name="__main__")
                 cwd=path / "source", env=env, timeout=120)
 
 
-def search(path, root, query, top=10, json_output=False, stats=False, env=None):
+def search(path, root, query, top=10, json_output=False, stats=False, env=None, globs=None):
     args = ["search", query, str(root), "--top", str(top)]
+    for pattern in globs or ():
+        args.extend(["--glob", pattern])
     if json_output:
         args.append("--json")
     if stats:

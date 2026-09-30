@@ -68,6 +68,7 @@ Dentro da raiz ou de um subdiretório do projeto:
 my-tools init --profile search-experimental
 my-tools enable search --provider siftr --allow-remote
 my-tools search "onde o cancelamento é processado?" --json --stats
+my-tools search "onde o cancelamento é processado?" --glob 'src/*.ts' --top 5 --json --stats
 my-tools disable search
 ```
 
@@ -75,6 +76,13 @@ my-tools disable search
 autoriza envio: a execução é bloqueada até a configuração permitir esse uso.
 O opt-in deve corresponder à autorização real para os dados do projeto.
 Não use como autorização para enviar código de terceiros/clientes sem permissão.
+
+`--glob` limita os arquivos elegíveis antes do ranking e pode ser repetido.
+Os padrões são relativos à raiz; `src/*.ts` também alcança subdiretórios no
+matching do Siftr. Sem esse argumento, a busca mantém o escopo upstream padrão.
+O filtro não identifica segredos dentro do código. Use uma cópia saneada quando
+o checkout misturar código com dados privados. `--top 5` limita resultados,
+mas não limita sozinho todos os arquivos examinados ou enviados.
 
 A configuração `.my-tools.json` contém provider, versão, enabled e allow_remote_data.
 Ela não pode conter credenciais. Por padrão, `version: approved` acompanha a versão
@@ -145,6 +153,9 @@ tokens ausentes como desconhecidos. Protocolos e fixtures reutilizáveis ficam a
 resultados reais permanecem nos registros autorizados do projeto.
 Veja [protocolo de busca](benchmarks/protocols/search.md), [arquitetura](docs/architecture.md)
 e [integração com skills](docs/skills.md).
+
+O [fluxo de busca](docs/search-workflow.md) descreve os comandos, limites de
+escopo e decisão proporcional entre Siftr e rg.
 
 ## Escopo da versão 0.1
 

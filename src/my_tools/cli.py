@@ -46,6 +46,7 @@ def parser():
     sub.add_argument("--top", type=int, default=10)
     sub.add_argument("--json", action="store_true")
     sub.add_argument("--stats", action="store_true")
+    sub.add_argument("--glob", action="append", help="Limitar caminhos elegíveis; repetível, ex.: 'src/*.ts'")
     sub = commands.add_parser("auth")
     sub.add_argument("operation", choices=["set", "remove"])
     sub.add_argument("--provider", required=True, choices=["openrouter", "typesafe"])
@@ -120,6 +121,10 @@ def main(argv=None):
         elif args.command == "search":
             if not args.query.strip() or args.query.startswith("-") or not 1 <= args.top <= 100:
                 raise ToolError("Consulta vazia/opção ou top fora de 1..100")
+            if args.glob and any(not pattern.strip() or pattern.startswith(("-", "/"))
+                                 or ".." in pattern.replace("\\", "/").split("/")
+                                 or any(c in pattern for c in ("\n", "\r", "\x00")) for pattern in args.glob):
+                raise ToolError("Use globs relativos, não vazios e sem travessia de diretórios")
             config = project_config(root)
             entry = config["capabilities"].get("search", {})
             if not entry.get("enabled"):
@@ -130,7 +135,7 @@ def main(argv=None):
             from .credentials import effective
             env, _ = effective(manager.home)
             from .siftr import search
-            return search(path, root, args.query, args.top, args.json, args.stats, env=env)
+            return search(path, root, args.query, args.top, args.json, args.stats, env=env, globs=args.glob)
         else:
             names = list(manager.tools) if getattr(args, "all", False) else [args.tool]
             if getattr(args, "accept", None) and getattr(args, "all", False):

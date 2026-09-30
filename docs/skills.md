@@ -6,7 +6,8 @@ o comportamento no consumidor:
 
 > Quando nomes/termos exatos não forem conhecidos, consulte `my-tools status`.
 > Se search estiver habilitado para os dados do projeto, use
-> `my-tools search "comportamento procurado" --json --stats`. Confira os arquivos
+> `my-tools search "comportamento procurado" --glob 'src/*.ts' --top 5 --json --stats`,
+> adaptando caminhos/extensões ao escopo autorizado. Confira os arquivos
 > retornados. Se a ferramenta falhar ou os trechos forem insuficientes, use rg e
 > leitura direta. Preserve evidência necessária e regras do projeto.
 
@@ -17,3 +18,6 @@ nova do runtime escolhido. Disponibilidade em CLI local não comprova Cloud.
 
 Esta entrega não altera o pacote my-skills ou projetos consumidores. A configuração
 de um piloto pode ficar somente no projeto sintético até haver ganho observado.
+
+Veja o [fluxo proporcional de busca](search-workflow.md) para decisão entre
+rg/Siftr, leitura de chamadores, fallback e interpretação das métricas.

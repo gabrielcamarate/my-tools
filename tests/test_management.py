@@ -23,7 +23,7 @@ def main():
     load_env()
     args = sys.argv[1:]
     if "--help" in args:
-        print("query --json --top")
+        print("query --json --top --glob")
     elif "--version" in args:
         print("siftr fixture")
     elif args[1] == "EXIT7":
@@ -266,6 +266,33 @@ class Offline(unittest.TestCase):
         result = subprocess.run(command(path, ["search", "EXIT7", str(self.project)]), capture_output=True)
         self.assertEqual(result.returncode, 7)
         self.assertIn(b"fixture stderr", result.stderr)
+
+    def test_search_scope_reaches_runtime_as_separate_literal_arguments(self):
+        self.manager.install("siftr")
+        self.invoke("init")
+        self.invoke("enable", "search", "--allow-remote")
+        from my_tools.siftr import search
+        path = self.manager.resolve("siftr")
+        output = self.base / "output.json"
+        original = subprocess.run
+        with output.open("w") as stdout:
+            # Real adapter process; the fixture records the upstream arguments.
+            with patch("my_tools.siftr.subprocess.run", wraps=subprocess.run) as operation:
+                operation.side_effect = lambda *a, **kw: original(*a, **kw, stdout=stdout)
+                code = search(path, self.project, "question", globs=["src/*.ts", "tests/* $(touch SHOULD_NOT_EXIST)"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output.read_text())["args"],
+                         ["--top", "10", "--glob", "src/*.ts", "--glob", "tests/* $(touch SHOULD_NOT_EXIST)"])
+        self.assertFalse((self.project / "SHOULD_NOT_EXIST").exists())
+        with patch("my_tools.siftr.search", return_value=0) as operation:
+            self.assertEqual(self.invoke("search", "question", "--glob", "src/*.ts", "--glob", "tests/*.ts")[0], 0)
+            self.assertEqual(operation.call_args.kwargs["globs"], ["src/*.ts", "tests/*.ts"])
+
+    def test_invalid_search_scopes_never_start_adapter(self):
+        with patch("my_tools.siftr.search") as operation:
+            for pattern in ("", " ", "/private/*", "../*", "src/../*", "src\n*"):
+                self.assertEqual(self.invoke("search", "question", "--glob", pattern)[0], 2)
+            operation.assert_not_called()
 
     def test_update_all_pending_exit_and_accept_all_rejected(self):
         self.manager.install("siftr")
