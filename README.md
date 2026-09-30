@@ -15,7 +15,7 @@ continuam pertencendo ao projeto consumidor.
 
 | Capacidade | Ferramenta | Estado |
 |---|---|---|
-| Busca semântica de código | [Siftr](https://github.com/Bentlybro/siftr) | Experimental; compatibilidade offline verificada, benefício no workflow ainda não medido |
+| Busca semântica de código | [Siftr](https://github.com/Bentlybro/siftr) | Experimental; compatibilidade offline verificada; adoção depende da avaliação no consumidor |
 
 O Siftr envia caminhos, nomes de definições e trechos elegíveis ao provedor
 OpenRouter ou TypeSafe. Ele pode omitir evidência. Confira os arquivos retornados
