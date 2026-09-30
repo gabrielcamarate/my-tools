@@ -249,6 +249,8 @@ class Manager:
 
     def doctor(self, smoke=True):
         from .adapters import ADAPTERS
+        from .credentials import effective
+        effective_env, credential_source = effective(self.home)
         rows = []
         state = self.state()
         for name, spec in self.tools.items():
@@ -256,6 +258,8 @@ class Manager:
             row = {"tool": name, "active": entry.get("active"),
                    "previous": entry.get("previous"), "adoption": spec["status"],
                    "credential_in_environment": any(bool(os.environ.get(k)) for k in spec["credential_environment"])}
+            row["credential_available"] = any(bool(effective_env.get(k)) for k in spec["credential_environment"])
+            row["credential_source"] = credential_source
             try:
                 path = self.resolve(name)
                 ADAPTERS[spec["adapter"]].check(path, spec, entry["active"], smoke=smoke)

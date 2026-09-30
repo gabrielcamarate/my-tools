@@ -98,13 +98,13 @@ runpy.run_module("unittest", run_name="__main__")
                 cwd=path / "source", env=env, timeout=120)
 
 
-def search(path, root, query, top=10, json_output=False, stats=False):
+def search(path, root, query, top=10, json_output=False, stats=False, env=None):
     args = ["search", query, str(root), "--top", str(top)]
     if json_output:
         args.append("--json")
     if stats:
         args.append("--stats")
     try:
-        return subprocess.run(command(path, args), cwd=root, check=False).returncode
+        return subprocess.run(command(path, args), cwd=root, env=env, check=False).returncode
     except OSError as exc:
         raise ToolError("Não foi possível iniciar Siftr") from exc

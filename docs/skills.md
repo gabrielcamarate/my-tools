@@ -12,7 +12,7 @@ o comportamento no consumidor:
 
 Não é necessário criar uma skill para cada comando nem registrar outro MCP
 para usar a primeira versão. O agente precisa alcançar o launcher pelo shell
-e receber a credencial no ambiente autorizado. Teste descoberta em uma sessão
+e acessar a credencial pelo ambiente autorizado ou cadastro pessoal do launcher. Teste descoberta em uma sessão
 nova do runtime escolhido. Disponibilidade em CLI local não comprova Cloud.
 
 Esta entrega não altera o pacote my-skills ou projetos consumidores. A configuração

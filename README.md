@@ -41,12 +41,24 @@ Os programas upstream ficam fora do Git, em `~/.local/share/my-tools`.
 `MY_TOOLS_HOME` permite outro armazenamento; `setup --bin-dir` permite testar
 o launcher em um diretório isolado. Nenhum MCP/hook é instalado implicitamente.
 
-Credenciais são herdadas **somente do ambiente do processo**: `OPENROUTER_API_KEY`
-ou `TYPESAFE_API_KEY`, conforme Siftr. O adaptador desabilita o carregador upstream
-de `.env`; não lê configurações de credenciais dos projetos nem as salva.
-`doctor` informa apenas presença no ambiente, nunca o valor. Instalação e
+Credenciais podem vir do ambiente (`OPENROUTER_API_KEY` ou `TYPESAFE_API_KEY`)
+ou de um cadastro pessoal persistente, fora do checkout:
+
+```bash
+my-tools auth set --provider openrouter   # ou typesafe; solicita chave oculta
+my-tools doctor
+my-tools auth remove --provider openrouter
+```
+
+O cadastro fica em `~/.local/share/my-tools/credentials.json` (ou MY_TOOLS_HOME),
+com permissão 600 e propriedade da conta atual. É arquivo local em texto claro,
+não um cofre criptografado. A chave não é argumento de comando nem saída de log.
+Variáveis explícitas do processo prevalecem sobre o cadastro. O adaptador
+desabilita dotenv upstream e não lê credenciais dos projetos.
+`doctor` informa presença e origem, nunca o valor. Instalação e
 verificações offline funcionam sem credenciais. Inferência requer acesso válido
-ao provedor. O ambiente que inicia Codex precisa disponibilizá-lo ao processo filho.
+ao provedor. O cadastro local permite ao launcher reutilizar a chave depois de
+fechar o terminal; ele não configura credenciais em outros computadores/Cloud.
 
 ## Usar em um projeto
 

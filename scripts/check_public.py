@@ -20,7 +20,7 @@ def main():
         if path.is_symlink():
             errors.append(f"Symlink versionado: {name}")
             continue
-        if path.name == ".env" or path.name.startswith(".env.") or path.name == ".my-tools.json":
+        if path.name == ".env" or path.name.startswith(".env.") or path.name in (".my-tools.json", "credentials.json"):
             errors.append(f"Configuração local versionada: {name}")
             continue
         try:

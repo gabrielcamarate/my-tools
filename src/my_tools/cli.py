@@ -1,5 +1,6 @@
 """Explicit CLI; no global hooks and no automatic project adoption."""
 import argparse
+import getpass
 import json
 from pathlib import Path
 import sys
@@ -45,6 +46,9 @@ def parser():
     sub.add_argument("--top", type=int, default=10)
     sub.add_argument("--json", action="store_true")
     sub.add_argument("--stats", action="store_true")
+    sub = commands.add_parser("auth")
+    sub.add_argument("operation", choices=["set", "remove"])
+    sub.add_argument("--provider", required=True, choices=["openrouter", "typesafe"])
     sub = commands.add_parser("compare")
     sub.add_argument("baseline", type=Path)
     sub.add_argument("candidate", type=Path)
@@ -67,6 +71,20 @@ def main(argv=None):
             emit(compare(args.baseline, args.candidate))
             return 0
         manager = Manager()
+        if args.command == "auth":
+            from .credentials import clear, save
+            if args.operation == "set":
+                if not sys.stdin.isatty():
+                    raise ToolError("Execute auth set em um terminal interativo; a chave será solicitada sem eco")
+                key = getpass.getpass(f"Chave {args.provider} (oculta): ")
+                with manager.lock():
+                    save(manager.home, args.provider, key)
+                del key
+            else:
+                with manager.lock():
+                    clear(manager.home, args.provider)
+            emit({"status": "saved_local" if args.operation == "set" else "removed_local", "provider": args.provider})
+            return 0
         root = project_root(args.project or Path.cwd())
         if args.command == "init" and args.project is not None:
             # An explicitly named nested fixture/project gets its own boundary.
@@ -109,8 +127,10 @@ def main(argv=None):
             if not entry.get("allow_remote_data"):
                 raise ToolError("Envio remoto não habilitado para este projeto; reveja o escopo antes de enable --allow-remote")
             path = manager.resolve(entry["provider"], entry["version"])
+            from .credentials import effective
+            env, _ = effective(manager.home)
             from .siftr import search
-            return search(path, root, args.query, args.top, args.json, args.stats)
+            return search(path, root, args.query, args.top, args.json, args.stats, env=env)
         else:
             names = list(manager.tools) if getattr(args, "all", False) else [args.tool]
             if getattr(args, "accept", None) and getattr(args, "all", False):

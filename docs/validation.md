@@ -28,3 +28,16 @@ Python 3.11/3.14. Ele não utiliza credenciais nem reproduz benchmarks live.
 Uma nova revisão invalida as verificações afetadas. Upstream, ambiente e resultados
 de piloto têm validade própria. Presença de workflow/badge não deve ser descrita
 como CI PASS antes do resultado daquele commit.
+
+## Cadastro pessoal de credenciais
+
+Adição posterior: 37 testes próprios passaram, incluindo cadastro persistente
+com permissão 600, recusa de symlink/arquivo acessível por outros usuários,
+precedência do ambiente e diagnósticos sem valor da chave. O CLI solicita o valor
+por prompt oculto em terminal interativo. Esse armazenamento local em texto claro
+não é um cofre criptografado e não faz parte do Git.
+
+O primeiro caso de busca live foi executado pelo operador no terminal e retornou
+credits.py em primeiro lugar, sem falhas, em aproximadamente 0,94 segundo segundo
+a saída fornecida. Isso não mede economia Codex. Os dois casos restantes aguardam
+credencial disponível ao executor; não foram reportados como concluídos.
