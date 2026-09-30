@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "arm": "baseline",
+  "environment": {
+    "fixture_revision": "synthetic-example-v1",
+    "model": "example-only",
+    "reasoning": "example-only",
+    "acceptance": "example-v1"
+  },
+  "cases": [
+    {"id": "example-1", "seconds": 10, "outcome": "accepted", "codex_total_tokens": null, "recoveries": 0},
+    {"id": "example-2", "seconds": 12, "outcome": "accepted", "codex_total_tokens": null, "recoveries": 0},
+    {"id": "example-3", "seconds": 8, "outcome": "blocked", "codex_total_tokens": null, "recoveries": 1}
+  ]
+}

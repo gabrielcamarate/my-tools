@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "capabilities": {
+    "search": {
+      "provider": "siftr",
+      "version": "approved",
+      "enabled": false,
+      "allow_remote_data": false
+    }
+  }
+}
