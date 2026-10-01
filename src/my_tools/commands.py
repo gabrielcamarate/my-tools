@@ -6,11 +6,14 @@ import uuid
 from .core import ToolError, atomic_json, read_json
 
 NAME = 'jev-test-filter'
+FIELDS = {NAME: ('command', 'skill'), 'jev-browser': ('command', 'mcp_command', 'skill')}
+SKILLS = {NAME: NAME, 'jev-browser': 'jev-browser-playwright'}
 
 
-def targets(manager, commit):
-    source = manager.location(NAME, commit) / 'source'
-    return [source / 'dist/cli.js', source / 'skills' / NAME]
+def targets(manager, commit, name=NAME):
+    source = manager.location(name, commit) / 'source'
+    return ([source / 'dist/cli.js', source / 'dist/mcp-stdio.js', source / 'skills/jev-browser']
+            if name == 'jev-browser' else [source / 'dist/cli.js', source / 'skills' / NAME])
 
 
 def registry(manager):
@@ -19,20 +22,20 @@ def registry(manager):
     if set(value) != {'schema_version', 'tools'} or value['schema_version'] != 1 or not isinstance(value['tools'], dict):
         raise ToolError('Registro de CLI inválido')
     for name, entry in value['tools'].items():
-        if name != NAME or not isinstance(entry, dict) or set(entry) != {'command', 'skill', 'active'}:
+        if name not in FIELDS or not isinstance(entry, dict) or set(entry) != set(FIELDS[name]) | {'active'}:
             raise ToolError('Registro de CLI inválido')
         manager.location(name, entry['active'])
-        if any(not isinstance(entry[k], str) or not Path(entry[k]).is_absolute() for k in ('command', 'skill')):
+        if any(not isinstance(entry[k], str) or not Path(entry[k]).is_absolute() for k in FIELDS[name]):
             raise ToolError('Destinos da CLI precisam de caminhos absolutos')
     return value
 
 
-def switch(manager, entry, commit):
-    links = [Path(entry[k]) for k in ('command', 'skill')]
-    dests = targets(manager, commit)
-    root = manager.home / 'tools' / NAME
+def switch(manager, entry, commit, name=NAME):
+    links = [Path(entry[k]) for k in FIELDS[name]]
+    dests = targets(manager, commit, name)
+    root = manager.home / 'tools' / name
     previous = []
-    # Preflight every destination before modifying either one.
+    # Preflight every destination before modifying any link.
     for link, dest in zip(links, dests):
         if not dest.exists():
             raise ToolError('CLI/skill oficial ausente')
@@ -72,18 +75,20 @@ def restore(changes):
 
 
 def integrate(manager, name, apply=False, bin_dir=None):
-    if name != NAME:
+    if name not in FIELDS:
         raise ToolError('CLI ainda não registrada')
     manager.resolve(name)
     commit = manager.state()['tools'][name]['active']
     folder = Path(bin_dir).expanduser().resolve() if bin_dir else Path.home() / '.local/bin'
-    entry = {'command': str(folder / NAME), 'skill': str(Path.home() / '.agents/skills' / NAME), 'active': commit}
+    entry = {'command': str(folder / name), 'skill': str(Path.home() / '.agents/skills' / SKILLS[name]), 'active': commit}
+    if name == 'jev-browser':
+        entry['mcp_command'] = str(folder / 'jev-browser-mcp')
     value = registry(manager)
     old = value['tools'].get(name)
-    if old and any(old[k] != entry[k] for k in ('command', 'skill')):
+    if old and any(old[k] != entry[k] for k in FIELDS[name]):
         raise ToolError('Destinos já registrados; preserve a integração existente')
     if apply:
-        changes = switch(manager, entry, commit)
+        changes = switch(manager, entry, commit, name)
         value['tools'][name] = entry
         try:
             atomic_json(manager.home / 'commands.json', value)
@@ -94,12 +99,12 @@ def integrate(manager, name, apply=False, bin_dir=None):
 
 
 def synchronize(manager, name, commit):
-    if name != NAME:
+    if name not in FIELDS:
         return
     value = registry(manager)
     entry = value['tools'].get(name)
     if entry:
-        changes = switch(manager, entry, commit)
+        changes = switch(manager, entry, commit, name)
         entry['active'] = commit
         try:
             atomic_json(manager.home / 'commands.json', value)
@@ -109,13 +114,14 @@ def synchronize(manager, name, commit):
 
 
 def diagnose(manager, name, commit):
-    if name != NAME:
+    if name not in FIELDS:
         return {}
     entry = registry(manager)['tools'].get(name)
     if not entry:
         return {}
     if entry['active'] != commit or any(not Path(entry[k]).is_symlink()
             or Path(entry[k]).resolve() != dest.resolve()
-            for k, dest in zip(('command', 'skill'), targets(manager, commit))):
+            for k, dest in zip(FIELDS[name], targets(manager, commit, name))):
         raise ToolError('Integração CLI/skill diverge da revisão ativa')
-    return {'official_command': entry['command'], 'official_skill': entry['skill']}
+    return {'official_command': entry['command'], 'official_skill': entry['skill'],
+            **({'official_mcp_command': entry['mcp_command']} if name == 'jev-browser' else {})}

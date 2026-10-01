@@ -90,3 +90,85 @@ class CommandTests(unittest.TestCase):
                 self.manager.activate(commands.NAME, self.second)
         self.assert_first()
         self.assertEqual(commands.registry(self.manager)['tools'][commands.NAME]['active'], self.first)
+
+
+class BrowserCommandTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name)
+        self.manager = Manager(home=self.home / 'storage')
+        self.first, self.second = '1' * 40, '2' * 40
+        for commit in (self.first, self.second):
+            cli, mcp, skill = commands.targets(self.manager, commit, 'jev-browser')
+            cli.parent.mkdir(parents=True)
+            cli.write_text('synthetic executable')
+            mcp.write_text('synthetic MCP executable')
+            skill.mkdir(parents=True)
+            (skill / 'SKILL.md').write_text('synthetic skill')
+        self.entry = {'command': str(self.home / 'bin/jev-browser'),
+                      'mcp_command': str(self.home / 'bin/jev-browser-mcp'),
+                      'skill': str(self.home / 'skills/jev-browser-playwright'), 'active': self.first}
+        commands.switch(self.manager, self.entry, self.first, 'jev-browser')
+        atomic_json(self.manager.home / 'commands.json', {'schema_version': 1, 'tools': {'jev-browser': self.entry}})
+
+    def assert_revision(self, commit):
+        for key, dest in zip(commands.FIELDS['jev-browser'], commands.targets(self.manager, commit, 'jev-browser')):
+            self.assertEqual(Path(self.entry[key]).resolve(), dest)
+
+    def test_update_and_rollback_three_links(self):
+        commands.synchronize(self.manager, 'jev-browser', self.second)
+        self.assert_revision(self.second)
+        commands.synchronize(self.manager, 'jev-browser', self.first)
+        self.assert_revision(self.first)
+
+    def test_foreign_mcp_preserved_before_any_switch(self):
+        link = Path(self.entry['mcp_command'])
+        link.unlink()
+        link.write_text('foreign tool')
+        with self.assertRaises(ToolError):
+            commands.synchronize(self.manager, 'jev-browser', self.second)
+        self.assertEqual(link.read_text(), 'foreign tool')
+        self.assertEqual(Path(self.entry['command']).resolve(), commands.targets(self.manager, self.first, 'jev-browser')[0])
+
+    def test_registry_failure_restores_three_links(self):
+        with patch.object(commands, 'atomic_json', side_effect=OSError('synthetic failure')):
+            with self.assertRaises(OSError):
+                commands.synchronize(self.manager, 'jev-browser', self.second)
+        self.assert_revision(self.first)
+        self.assertEqual(commands.registry(self.manager)['tools']['jev-browser']['active'], self.first)
+
+    def test_third_link_failure_restores_prior_two(self):
+        original = commands.replace_link
+        failed = False
+        def replace(link, dest):
+            nonlocal failed
+            if link == Path(self.entry['skill']) and not failed:
+                failed = True
+                raise OSError('synthetic failure')
+            original(link, dest)
+        with patch.object(commands, 'replace_link', side_effect=replace):
+            with self.assertRaises(OSError):
+                commands.synchronize(self.manager, 'jev-browser', self.second)
+        self.assert_revision(self.first)
+
+    def test_controller_state_failure_restores_browser_links_and_registry(self):
+        from my_tools import browser
+        self.manager.save({'schema_version': 1, 'tools': {'jev-browser': {
+            'active': self.first, 'previous': None, 'accepted': [self.first, self.second], 'catalog_commit': self.first}}})
+        with patch.object(browser, 'check'), patch.object(self.manager, 'save', side_effect=OSError('synthetic failure')):
+            with self.assertRaises(OSError):
+                self.manager.activate('jev-browser', self.second)
+        self.assert_revision(self.first)
+        self.assertEqual(commands.registry(self.manager)['tools']['jev-browser']['active'], self.first)
+
+    def test_browser_patch_conflict_preserves_source(self):
+        from my_tools import browser
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'src/decision.ts'
+            path.parent.mkdir()
+            path.write_text('conflicting provider')
+            with self.assertRaises(ToolError):
+                browser.apply_provider(folder)
+            self.assertEqual(path.read_text(), 'conflicting provider')
+            self.assertFalse((Path(folder) / 'src/provider.ts').exists())

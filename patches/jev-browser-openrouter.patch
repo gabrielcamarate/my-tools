@@ -1,0 +1,178 @@
+diff --git i/skills/jev-browser/SKILL.md w/skills/jev-browser/SKILL.md
+index 15b1b4c..155317e 100644
+--- i/skills/jev-browser/SKILL.md
++++ w/skills/jev-browser/SKILL.md
+@@ -1,13 +1,13 @@
+ ---
+-name: jev-browser
++name: jev-browser-playwright
+ description: Automate and test browsers with native Playwright commands, parallel Jev decisions, persistent CLI sessions, structured extraction, deterministic assertions, and grounded semantic verification.
+ ---
+ 
+ # Jev Browser
+ 
+-Use the installed `jev-browser` executable, or `node /path/to/jev-browser/dist/cli.js`. Read `--help` once for available commands. Native operations need no model key; AI operations need JEV_API_KEY.
++Use the installed `jev-browser` executable, or `node /path/to/jev-browser/dist/cli.js`. Read `--help` once for available commands. Native operations need no model key; AI operations use OPENROUTER_API_KEY via OpenRouter Decisions API (typesafe/jev-1.13). If absent, the private mode-600 personal Siftr credential is reused without copying it. An explicitly empty variable disables this fallback. The MCP registration is jev-playwright; this skill is separate from the personal Chrome Jev Browser Control connection.
+ 
+-For visible UX/discoverability review, use an isolated `--screen-only` session and `screen --args JSON` / MCP `browser_screen`. Read its image, then use coordinates, focused text, editing keys or scroll with the latest `observationId`. A rejected request keeps that ID usable; fix the field named in `error.details.issues`. `navigated: true` means the returned image is the page after a main-frame navigation. If looking keeps failing, `back`, `forward` or `reload` can omit `observationId` to recover. Observe meaningful transitions; do not inject selectors, DOM snapshots, exact routes or implementation knowledge. The calling model must understand images, unless the session was opened with `--vision-base-url` and `--vision-model`: then `screen_decide` / `browser_screen_decide` returns a text description and Jev's answers to your questions instead of images to read. This tool executes physical inputs and records evidence; it does not judge UX. See `docs/screen-review.md` for recordings and capability limits. Use ordinary automation and deterministic assertions separately for functional verification.
++For visible UX/discoverability review, use an isolated `--screen-only` session and `screen --args JSON` / MCP `browser_screen`. Read its image, then use coordinates, focused text, editing keys or scroll with the latest `observationId`. A rejected request keeps that ID usable; fix the field named in `error.details.issues`. `navigated: true` means the returned image is the page after a main-frame navigation. If looking keeps failing, `back`, `forward` or `reload` can omit `observationId` to recover. Observe meaningful transitions; do not inject selectors, DOM snapshots, exact routes or implementation knowledge. The calling model must understand images, unless the session was opened with `--vision-base-url` and `--vision-model`: then `screen_decide` / `browser_screen_decide` returns a text description and Jev's answers to your questions instead of images to read. This tool executes physical inputs and records evidence; it does not judge UX. See `../../docs/screen-review.md` for recordings and capability limits. Use ordinary automation and deterministic assertions separately for functional verification.
+ 
+ For a whole creation task, prefer one `run --session task --args JSON` with `instruction` and nested `values`; use `browser_run` in MCP. The runtime batches judgments, fills serially, saves and checks a new result. Inspect `verification.readback`/`unobserved` and `effects`; never repeat an `unknown` commit. A `continuation.id` on the result or `error.partial` can be resumed with `resume ID --session task` / `browser_resume` in the same running session; unknown saves are reconciled read-only first. Existing values and observation scope cannot change. Inspect ordered `checkpoints` separately from final verification. Optional `expect` uses the native read-only assertion schema. Use the low-level sequence below for direct control or unsupported widgets.
+ 
+diff --git i/src/decision.ts w/src/decision.ts
+index 6cf21e5..b910d76 100644
+--- i/src/decision.ts
++++ w/src/decision.ts
+@@ -1,5 +1,6 @@
+ import { TypeSafeClient, type ChoiceQuestion, type EntryType, type Fetch, type Usage } from '@typesafe-ai/sdk';
+ import { z } from 'zod';
++import { openRouterKey, openRouterFetch } from './provider.js';
+ import { BrowserError } from './errors.js';
+ 
+ export interface DecisionRequest {
+@@ -65,11 +66,14 @@ const tokenLimitRejection = (error: unknown): boolean => {
+ export class JevDecisionEngine implements DecisionEngine {
+   private readonly client: TypeSafeClient;
+   constructor(options: JevOptions = {}) {
+-    const url = URL.parse(setting(options.baseURL) ?? setting(process.env.JEV_BASE_URL) ?? hostedOrigin);
++    const url = URL.parse(setting(options.baseURL) ?? setting(process.env.JEV_BASE_URL) ?? 'https://openrouter.ai/api/alpha');
+     if (!url || !['http:', 'https:'].includes(url.protocol)) throw new BrowserError('CONFIG', 'The decision baseURL must be an HTTP(S) URL.');
+     // Hosted keys from the environment stay with hosted Jev; another endpoint needs apiKey or JEV_ENDPOINT_API_KEY, else a keyless placeholder.
+     const hosted = url.origin === hostedOrigin;
+-    const apiKey = setting(options.apiKey) ?? (hosted ? setting(process.env.JEV_API_KEY) ?? setting(process.env.TYPESAFE_API_KEY) : setting(process.env.JEV_ENDPOINT_API_KEY));
++    const openrouter = url.origin === 'https://openrouter.ai';
++    if (openrouter && url.pathname.replace(/\/$/, '') !== '/api/alpha') throw new BrowserError('CONFIG', 'Use the OpenRouter Decisions API baseURL https://openrouter.ai/api/alpha.');
++    const apiKey = setting(options.apiKey) ?? (openrouter ? openRouterKey() : hosted ? setting(process.env.JEV_API_KEY) ?? setting(process.env.TYPESAFE_API_KEY) : setting(process.env.JEV_ENDPOINT_API_KEY));
++    if (openrouter && !apiKey) throw new BrowserError('CONFIG', 'OpenRouter needs OPENROUTER_API_KEY.');
+     if (hosted && !apiKey) throw new BrowserError('CONFIG', 'Hosted Jev needs apiKey, JEV_API_KEY or TYPESAFE_API_KEY. A custom System One baseURL or JEV_BASE_URL needs no hosted key.');
+     if (apiKey && url.protocol === 'http:' && !loopback(url.hostname))
+       throw new BrowserError('CONFIG', 'An API key is sent only over HTTPS or to a loopback endpoint. Use an https:// decision baseURL.');
+@@ -77,11 +81,11 @@ export class JevDecisionEngine implements DecisionEngine {
+       apiKey: apiKey ?? 'local',
+       // Always explicit, so the SDK's own TYPESAFE_BASE_URL cannot redirect a hosted key.
+       baseURL: url.href,
+-      defaultModel: setting(options.model) ?? setting(process.env.JEV_MODEL),
++      defaultModel: setting(options.model) ?? setting(process.env.JEV_MODEL) ?? (openrouter ? 'typesafe/jev-1.13' : undefined),
+       timeout: options.timeoutMs ?? 15_000,
+       retry: { maxRetries: 0 },
+       logLevel: 'off',
+-      fetch: options.fetch,
++      fetch: openrouter ? openRouterFetch(options.fetch) : options.fetch,
+     });
+   }
+   async decide(request: DecisionRequest, options: { signal?: AbortSignal; maxRetries?: number } = {}): Promise<DecisionResult> {
+diff --git i/src/provider.ts w/src/provider.ts
+new file mode 100644
+index 0000000..26b6521
+--- /dev/null
++++ w/src/provider.ts
+@@ -0,0 +1,25 @@
++/** Transport-only OpenRouter adaptation; the upstream decision envelope is unchanged. */
++import { lstatSync, readFileSync } from 'node:fs';
++import { homedir } from 'node:os';
++import { join } from 'node:path';
++import type { Fetch } from '@typesafe-ai/sdk';
++export function openRouterKey(): string | undefined {
++  if (Object.hasOwn(process.env, 'OPENROUTER_API_KEY')) return process.env.OPENROUTER_API_KEY?.trim() || undefined;
++  try {
++    const path = join(homedir(), '.config/siftr/.env');
++    const stat = lstatSync(path);
++    if (!stat.isFile() || (stat.mode & 0o077) !== 0) return undefined;
++    const match = readFileSync(path, 'utf8').match(/^\s*(?:export\s+)?OPENROUTER_API_KEY\s*=\s*(.*?)\s*$/m);
++    let value = match?.[1];
++    if (value && ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))) value = value.slice(1, -1);
++    return value?.trim() || undefined;
++  } catch { return undefined; }
++}
++export function openRouterFetch(fetcher: Fetch = (input, init) => globalThis.fetch(input, init)): Fetch {
++  return (input, init) => {
++    const url = new URL(String(input));
++    if (url.origin !== 'https://openrouter.ai' || url.pathname !== '/api/alpha/v1/systemone') throw new Error('Unexpected OpenRouter decision route');
++    url.pathname = '/api/alpha/decisions';
++    return fetcher(url.href, { ...init, redirect: 'error' });
++  };
++}
+diff --git i/test/decision.test.mjs w/test/decision.test.mjs
+index ce965a2..9aeee29 100644
+--- i/test/decision.test.mjs
++++ w/test/decision.test.mjs
+@@ -7,7 +7,7 @@ const request = {state:{screen:'synthetic test'},questions:{action:{type:'choice
+ 
+ test('Jev uses the official systemOne payload and validates the chosen ID', async () => {
+   let body, url;
+-  const engine = new sdk.JevDecisionEngine({apiKey:'test-only',model:'pinned-model',fetch:async(u,init)=>{
++  const engine = new sdk.JevDecisionEngine({baseURL:'https://api.typesafe.ai',apiKey:'test-only',model:'pinned-model',fetch:async(u,init)=>{
+     url=u; body=JSON.parse(init.body); return Response.json(apiResult(body));
+   }});
+   const result = await engine.decide(request);
+@@ -74,7 +74,7 @@ test('JEV_BASE_URL alone selects a custom System One endpoint', async () => {
+ test('default hosted endpoint still requires an API key', () => {
+   const saved={JEV_API_KEY:process.env.JEV_API_KEY,TYPESAFE_API_KEY:process.env.TYPESAFE_API_KEY,JEV_BASE_URL:process.env.JEV_BASE_URL};
+   delete process.env.JEV_API_KEY; delete process.env.TYPESAFE_API_KEY; delete process.env.JEV_BASE_URL;
+-  try { assert.throws(()=>new sdk.JevDecisionEngine(),{code:'CONFIG'}); }
++  try { assert.throws(()=>new sdk.JevDecisionEngine({baseURL:'https://api.typesafe.ai'}),{code:'CONFIG'}); }
+   finally { for(const [key,value] of Object.entries(saved)) value===undefined?delete process.env[key]:process.env[key]=value; }
+ });
+ 
+@@ -103,7 +103,7 @@ test('hosted keys from the environment are never sent to a custom System One end
+ });
+ test('the SDK TYPESAFE_BASE_URL cannot redirect a hosted key away from hosted Jev', async () => {
+   await withEnv({JEV_API_KEY:'HOSTED-TEST-KEY',TYPESAFE_BASE_URL:'http://127.0.0.1:8765'},async()=>{
+-    assert.deepEqual(await sent({}),{url:'https://api.typesafe.ai/v1/systemone',authorization:'Bearer HOSTED-TEST-KEY'});
++    assert.deepEqual(await sent({baseURL:'https://api.typesafe.ai'}),{url:'https://api.typesafe.ai/v1/systemone',authorization:'Bearer HOSTED-TEST-KEY'});
+     assert.deepEqual(await sent({baseURL:'https://api.typesafe.ai/'}),{url:'https://api.typesafe.ai/v1/systemone',authorization:'Bearer HOSTED-TEST-KEY'});
+   });
+ });
+@@ -126,13 +126,13 @@ test('credentials are refused over plain HTTP to a non-loopback endpoint', async
+     assert.equal((await sent({baseURL:'http://example.invalid:8765'})).authorization,'Bearer local');
+   });
+   await withEnv({JEV_ENDPOINT_API_KEY:'ENDPOINT-TEST-KEY',JEV_BASE_URL:'http://example.invalid:8765'},async()=>
+-    assert.throws(()=>new sdk.JevDecisionEngine(),{code:'CONFIG'}));
++    assert.throws(()=>new sdk.JevDecisionEngine({baseURL:'https://api.typesafe.ai'}),{code:'CONFIG'}));
+ });
+ test('blank keys are unset and do not block a custom endpoint', async () => {
+   for(const [env,options] of [[{JEV_API_KEY:''},{baseURL:'http://127.0.0.1:8765'}],[{TYPESAFE_API_KEY:'  ',JEV_BASE_URL:'http://127.0.0.1:8765'},{}],[{JEV_ENDPOINT_API_KEY:' '},{baseURL:'http://127.0.0.1:8765',apiKey:''}]])
+     await withEnv(env,async()=>assert.equal((await sent(options)).authorization,'Bearer local',JSON.stringify({env,options})));
+-  await withEnv({JEV_API_KEY:'HOSTED-TEST-KEY',JEV_BASE_URL:' '},async()=>assert.deepEqual(await sent({}),{url:'https://api.typesafe.ai/v1/systemone',authorization:'Bearer HOSTED-TEST-KEY'}));
+-  await withEnv({JEV_API_KEY:'',TYPESAFE_API_KEY:' '},async()=>assert.throws(()=>new sdk.JevDecisionEngine({apiKey:''}),{code:'CONFIG',message:/^Hosted Jev needs/}));
++  await withEnv({JEV_API_KEY:'HOSTED-TEST-KEY',JEV_BASE_URL:' '},async()=>assert.deepEqual(await sent({baseURL:'https://api.typesafe.ai'}),{url:'https://api.typesafe.ai/v1/systemone',authorization:'Bearer HOSTED-TEST-KEY'}));
++  await withEnv({JEV_API_KEY:'',TYPESAFE_API_KEY:' '},async()=>assert.throws(()=>new sdk.JevDecisionEngine({baseURL:'https://api.typesafe.ai',apiKey:''}),{code:'CONFIG',message:/^Hosted Jev needs/}));
+ });
+ test('an invalid decision baseURL is a configuration error', async () => {
+   await withEnv({JEV_API_KEY:'HOSTED-TEST-KEY'},async()=>{
+diff --git i/test/openrouter-provider.test.mjs w/test/openrouter-provider.test.mjs
+new file mode 100644
+index 0000000..6ada021
+--- /dev/null
++++ w/test/openrouter-provider.test.mjs
+@@ -0,0 +1,30 @@
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { mkdtempSync, mkdirSync, writeFileSync, chmodSync, rmSync, symlinkSync } from 'node:fs';
++import { tmpdir } from 'node:os';
++import { join } from 'node:path';
++import { JevDecisionEngine } from '../dist/index.js';
++import { openRouterKey } from '../dist/provider.js';
++import { apiResult } from './helpers.mjs';
++const request={state:'synthetic',questions:{pick:{type:'choice',instructions:'Choose',criteria:{a:'A',b:'B'}}}};
++test('OpenRouter changes only endpoint/auth/model and keeps typed state, questions and response validation',async()=>{
++ const saved={...process.env};process.env.OPENROUTER_API_KEY='synthetic-openrouter';delete process.env.JEV_BASE_URL;delete process.env.JEV_MODEL;
++ try {let seen;const engine=new JevDecisionEngine({fetch:async(url,init)=>{seen={url,auth:new Headers(init.headers).get('authorization'),redirect:init.redirect,body:JSON.parse(init.body)};return Response.json(apiResult(request));}});
++ assert.equal((await engine.decide(request)).answers.pick.choice,'a');
++ assert.deepEqual(seen,{url:'https://openrouter.ai/api/alpha/decisions',auth:'Bearer synthetic-openrouter',redirect:'error',body:{...request,model:'typesafe/jev-1.13'}});
++ await assert.rejects(new JevDecisionEngine({fetch:async()=>Response.json(apiResult(request,()=> 'invented'))}).decide(request),{code:'INVALID_DECISION'});
++ }finally{for(const key of Object.keys(process.env)) if(!(key in saved)) delete process.env[key];Object.assign(process.env,saved);}
++});
++test('shared personal credential is private, optional, never read from project, and explicit empty disables fallback',()=>{
++ const saved={...process.env},folder=mkdtempSync(join(tmpdir(),'jev-provider-'));process.env.HOME=folder;delete process.env.OPENROUTER_API_KEY;
++ try{const path=join(folder,'.config/siftr/.env');mkdirSync(join(folder,'.config/siftr'),{recursive:true});writeFileSync(path,'export OPENROUTER_API_KEY="synthetic-shared"\n',{mode:0o600});assert.ok(openRouterKey()==='synthetic-shared','Synthetic HOME credential isolation failed');
++ process.env.OPENROUTER_API_KEY='synthetic-env';assert.equal(openRouterKey(),'synthetic-env');process.env.OPENROUTER_API_KEY='';assert.equal(openRouterKey(),undefined);
++ delete process.env.OPENROUTER_API_KEY;chmodSync(path,0o644);assert.equal(openRouterKey(),undefined);rmSync(path);writeFileSync(join(folder,'outside'),'OPENROUTER_API_KEY=synthetic-outside',{mode:0o600});symlinkSync(join(folder,'outside'),path);assert.equal(openRouterKey(),undefined);
++ }finally{for(const key of Object.keys(process.env)) if(!(key in saved)) delete process.env[key];Object.assign(process.env,saved);rmSync(folder,{recursive:true,force:true});}
++});
++test('OpenRouter environment credential never follows custom endpoint and unsafe OpenRouter paths fail closed',async()=>{
++ const saved={...process.env};process.env.OPENROUTER_API_KEY='synthetic-private';delete process.env.JEV_ENDPOINT_API_KEY;
++ try {let auth;await new JevDecisionEngine({baseURL:'https://example.invalid',fetch:async(url,init)=>{auth=new Headers(init.headers).get('authorization');return Response.json(apiResult(request));}}).decide(request);assert.equal(auth,'Bearer local');assert.throws(()=>new JevDecisionEngine({baseURL:'https://openrouter.ai/other'}),{code:'CONFIG'});
++ process.env.OPENROUTER_API_KEY='';assert.throws(()=>new JevDecisionEngine(),{code:'CONFIG'});
++ }finally{for(const key of Object.keys(process.env)) if(!(key in saved)) delete process.env[key];Object.assign(process.env,saved);}
++});

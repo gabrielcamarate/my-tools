@@ -34,6 +34,17 @@
         "OPENROUTER_API_KEY"
       ],
       "installer": "jev-test-filter-source-v1"
+    },
+    "jev-browser": {
+      "repository": "https://github.com/tontoko/jev-browser.git",
+      "branch": "main",
+      "approved_commit": "94f8814fd9af914749c00b8b91192d307ffbb35d",
+      "status": "experimental",
+      "license": "Apache-2.0",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "jev-browser-source-v1"
     }
   }
 }

@@ -13,8 +13,9 @@ O controlador usa Python 3.11+ e biblioteca padrão; Linux é o alvo validado. R
 | [Siftr](https://github.com/Bentlybro/siftr) | CLI `siftr` e MCP oficial `siftr mcp` | Experimental; quatro ferramentas disponíveis |
 | [Jev Pruner](https://github.com/tamaratran/jev-pruner) | Plugin/skill oficial Codex e wrapper upstream | Experimental: OpenRouter, engine upstream preservado e poda live verificada |
 | [Jev Test Filter](https://github.com/mizchi/jev-test-filter) | CLI `jev-test-filter` e skill upstream | Experimental: seleção live via OpenRouter, preservando gates finais |
+| [Jev Browser](https://github.com/tontoko/jev-browser) | CLI `jev-browser`, MCP `jev-browser-mcp` e skill upstream | Experimental: Chromium isolado, OpenRouter e gravação/readback live verificados |
 
-O MCP oferece `semantic_search`, `focused_read`, `pick_relevant` e `filter_output` (experimental). Fonte upstream intacta; não há proxy ou tradução dos nomes/parâmetros.
+O MCP do Siftr oferece `semantic_search`, `focused_read`, `pick_relevant` e `filter_output` (experimental). Fonte upstream intacta; não há proxy ou tradução dos nomes/parâmetros.
 
 ## Instalar e conectar
 
@@ -134,3 +135,21 @@ Exemplos são sintéticos. Resultados reais ficam no registro autorizado do cons
 Veja [arquitetura](docs/architecture.md), [MCP e skills](docs/skills.md), [atualizações](docs/updates.md), [protocolo](benchmarks/protocols/search.md) e [proveniência](NOTICE.md).
 
 Licença MIT do controlador; ferramentas externas preservam suas licenças.
+
+## Jev Browser com OpenRouter
+
+[Guia de instalação, comandos, Cloud e testes](docs/jev-browser.md). Node.js 24+ recomendado (upstream: 22.15+), npm e Chromium/Playwright são necessários.
+
+```bash
+my-tools install jev-browser
+my-tools integrate jev-browser --apply
+# Obtenha SOURCE a partir do link oficial já integrado:
+SOURCE="$(dirname "$(dirname "$(readlink -f "$(command -v jev-browser)")")")"
+node "$SOURCE/node_modules/playwright-core/cli.js" install --with-deps chromium
+codex mcp add jev-playwright -- "$HOME/.local/bin/jev-browser-mcp"
+my-tools doctor
+```
+
+A CLI e o MCP são os entrypoints upstream, publicados por links estáveis que acompanham update/rollback. O patch muda somente provedor e orientação/testes associados. A skill upstream completa fica vinculada em `~/.agents/skills/jev-browser-playwright`, fora do my-skills. Esse nome e o registro MCP `jev-playwright` evitam colisão com outro Jev Browser Control usado no Chrome pessoal; comandos e ferramentas MCP upstream não são renomeados. Reabra/reconecte clientes existentes após o registro.
+
+Operações nativas não exigem inferência. Metas semânticas usam `OPENROUTER_API_KEY`, com o mesmo fallback privado do Siftr; não copie a chave para cada projeto. Use apenas páginas/dados autorizados. A ferramenta não assume o navegador pessoal nem substitui revisão visual, gates ou confirmação de ações.

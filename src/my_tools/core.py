@@ -70,7 +70,7 @@ def catalog(root=ROOT):
             raise ToolError("Commit aprovado precisa ser SHA completo")
         if not re.fullmatch(r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git", spec.get("repository", "")):
             raise ToolError("Origem precisa ser repositório GitHub HTTPS sem credenciais")
-        if spec.get("installer") not in {"siftr-source-v1", "jev-pruner-source-v1", "jev-test-filter-source-v1"}:
+        if spec.get("installer") not in {"siftr-source-v1", "jev-pruner-source-v1", "jev-test-filter-source-v1", "jev-browser-source-v1"}:
             raise ToolError("Instalador ainda não suportado")
         if not re.fullmatch(r"[A-Za-z0-9_./-]+", spec.get("branch", "")) or ".." in spec["branch"]:
             raise ToolError("Branch inválida")

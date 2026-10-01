@@ -35,3 +35,11 @@ Para Pruner, repair recompila o mesmo SHA em staging e restaura fonte/cache em f
 `commands.json` registra os destinos e SHA da CLI/skill do Jev Test Filter. A fonte é instalada com `pnpm install --frozen-lockfile --ignore-scripts`, compilada e verificada; o patch de OpenRouter só muda transporte, carregamento da credencial e orientação do provedor. `commands.py` publica o arquivo upstream `dist/cli.js` diretamente e a pasta completa da skill. Não há wrapper de seleção criado pelo gestor.
 
 Atualização/rollback verificam o candidato antes de trocar os dois links. Preflight protege destinos externos; falhas de troca/persistência restauram os links anteriores. `doctor` confere hashes de fonte/compilação e os destinos, além dos testes offline upstream. Não constitui sandbox nem comprova integridade de todo runtime/dependência instalada.
+
+## Browser SDK / CLI / MCP
+
+O instalador `jev-browser-source-v1` fixa fonte/licença/SHA, aplica patch de transporte com allowlist de arquivos e compila com npm ci (lockfile, scripts de instalação desativados). Verifica contratos, hashes de fonte/dist, casos de provedor e descoberta MCP sem iniciar browser. A suíte completa e testes live são avaliações explícitas, não repetidos automaticamente por doctor.
+
+`commands.json` também registra Jev Browser: CLI, MCP e skill completa. Os três links trocam juntos após preflight; falhas de link/registro/estado compensam a versão anterior, preservando destinos externos. O cliente registra o entrypoint estável com o nome `jev-playwright`; não há proxy nem wrapper operacional. A skill é identificada como `jev-browser-playwright` para evitar colisão de catálogo com Jev Browser Control. Sua referência relativa aponta para os documentos preservados no checkout upstream.
+
+Browser Chromium e dependências de sistema têm ciclo separado e são preparados pelo instalador oficial Playwright no ambiente. A gestão de SHA não remove o cache compartilhado de browsers. Não transporta configuração pessoal, cookies ou credenciais para projetos/Cloud. O patch OpenRouter preserva state/questions, validação de escolha, timeout/retry e respostas tipadas; adapta só URL/autenticação/modelo e carrega a credencial compartilhada somente no destino OpenRouter HTTPS.
