@@ -294,6 +294,26 @@ class Offline(unittest.TestCase):
                 self.assertEqual(self.invoke("search", "question", "--glob", pattern)[0], 2)
             operation.assert_not_called()
 
+    def test_controller_save_failure_restores_registered_native_version(self):
+        self.manager.install("siftr")
+        second = self.next()
+        self.manager.prepare("siftr", second)
+        with patch("my_tools.native.synchronize") as sync:
+            with patch.object(self.manager, "save", side_effect=OSError("fixture disk failure")):
+                with self.assertRaises(OSError):
+                    self.manager.activate("siftr", second)
+        self.assertEqual([call.args[2] for call in sync.call_args_list], [second, self.first])
+        self.assertEqual(self.manager.state()["tools"]["siftr"]["active"], self.first)
+
+    def test_doctor_reports_divergence_after_failed_native_compensation(self):
+        self.manager.install("siftr")
+        second = self.next()
+        atomic_json(self.manager.home / "native.json", {"schema_version": 1, "tools": {
+            "siftr": {"active": second, "command": str(self.base / "bin/siftr")}}})
+        row = self.manager.doctor(smoke=False)["tools"][0]
+        self.assertEqual(row["status"], "not_ready")
+        self.assertIn("diverge", row["reason"])
+
     def test_saved_scope_is_default_and_cannot_be_widened_by_search(self):
         self.manager.install("siftr")
         self.invoke("init")

@@ -1,3 +1,5 @@
+> Histórico do launcher de busca do piloto inicial. As skills atuais usam o MCP oficial; veja [skills](skills.md) e o README. A configuração e os filtros deste fluxo não se aplicam ao MCP.
+
 # Busca proporcional no workflow
 
 Siftr ajuda a localizar código. Depois leia a implementação e seus chamadores;

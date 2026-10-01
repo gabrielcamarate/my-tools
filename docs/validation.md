@@ -41,3 +41,9 @@ O primeiro caso de busca live foi executado pelo operador no terminal e retornou
 credits.py em primeiro lugar, sem falhas, em aproximadamente 0,94 segundo segundo
 a saída fornecida. Isso não mede economia Codex. Os dois casos restantes aguardam
 credencial disponível ao executor; não foram reportados como concluídos.
+
+## Integração oficial MCP, 30/09/2026
+
+A integração nativa usa a fonte Siftr aceita sem alterações e o entrypoint gerado pelo uv. Descoberta stdio conferiu os quatro nomes oficiais. Chamadas live de search, read, pick e filter funcionaram com código público e saída sintética. Tempos e respostas reais ficam no registro local autorizado; isso não mede ganho comparável de produtividade.
+
+Testes offline cobrem descoberta MCP real, preservação de comando externo, contrato incompatível, falha de registro, restauração do symlink, rollback e diagnóstico de divergência. Configurações/chaves de clientes não são versionadas. Uma sessão nova precisa validar uso real e política de confirmação no cliente; MCP disponível não garante seleção em toda tarefa. O piloto anterior de busca pelo shell continua histórico, não resultado do pacote completo.

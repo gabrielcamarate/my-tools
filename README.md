@@ -2,171 +2,97 @@
 
 [![Validate](https://github.com/gabrielcamarate/my-tools/actions/workflows/validate.yml/badge.svg)](https://github.com/gabrielcamarate/my-tools/actions/workflows/validate.yml)
 
-Programas reutilizáveis para o workflow de Codex e Claude. Uma fonte central,
-versões fixadas e ativação explícita por projeto. O controlador usa Python 3.11+
-e biblioteca padrão; instalação exige Git e suporte a `venv`. Linux é o alvo
-validado. Windows ainda não é suportado (locks POSIX e layout de runtime).
+Gestor de ferramentas oficiais para Codex e Claude: origem, SHA aceito, instalação, atualização e recuperação. O agente usa os comandos e MCPs do próprio fornecedor. O [my-skills](https://github.com/gabrielcamarate/my-skills) orienta quando usá-los. Não criamos nomes de operações próprios para substituir as ferramentas.
 
-O [my-skills](https://github.com/gabrielcamarate/my-skills) centraliza procedimentos.
-Este pacote centraliza suas ferramentas executáveis. Regras e autorizações
-continuam pertencendo ao projeto consumidor.
+O controlador usa Python 3.11+ e biblioteca padrão; Linux é o alvo validado. Regras e autorizações continuam pertencendo ao consumidor.
 
-## Primeira capacidade
+## Ferramenta integrada
 
-| Capacidade | Ferramenta | Estado |
+| Ferramenta | Interface do agente | Estado |
 |---|---|---|
-| Busca semântica de código | [Siftr](https://github.com/Bentlybro/siftr) | Experimental; compatibilidade offline verificada; adoção depende da avaliação no consumidor |
+| [Siftr](https://github.com/Bentlybro/siftr) | CLI `siftr` e MCP oficial `siftr mcp` | Experimental; quatro ferramentas disponíveis |
 
-O Siftr envia caminhos, nomes de definições e trechos elegíveis ao provedor
-OpenRouter ou TypeSafe. Ele pode omitir evidência. Confira os arquivos retornados
-e use busca lexical/leitura completa quando necessário. Não há fallback lexical
-automático neste adaptador. Termos exatos normalmente favorecem `rg`.
+O MCP oferece `semantic_search`, `focused_read`, `pick_relevant` e `filter_output` (experimental). Fonte upstream intacta; não há proxy ou tradução dos nomes/parâmetros.
 
-## Preparação pessoal
+## Instalar e conectar
 
 ```bash
 git clone https://github.com/gabrielcamarate/my-tools.git
 cd my-tools
-python3 -m unittest discover -s tests -v
-python3 scripts/check_public.py
-python3 bin/my-tools setup             # mostra o plano
-python3 bin/my-tools setup --apply     # link pessoal em ~/.local/bin
+python3 bin/my-tools setup --apply
 my-tools install siftr
+# Instale uv conforme https://docs.astral.sh/uv/getting-started/installation/
+my-tools integrate siftr             # prévia
+my-tools integrate siftr --apply     # entrypoint oficial, com SHA aceito
+siftr setup                         # cadastro oficial da chave, sem eco
+codex mcp add siftr -- "$HOME/.local/bin/siftr" mcp
 my-tools doctor
 ```
 
-`~/.local/bin` precisa estar no PATH. Caso não esteja, use `python3 bin/my-tools`
-diretamente ou configure seu shell. O setup preserva comandos de terceiros.
-Os programas upstream ficam fora do Git, em `~/.local/share/my-tools`.
-`MY_TOOLS_HOME` permite outro armazenamento; `setup --bin-dir` permite testar
-o launcher em um diretório isolado. Nenhum MCP/hook é instalado implicitamente.
+`integrate` usa a operação oficial `uv tool install --python 3.12`, com a fonte local da revisão aceita, em diretório separado por SHA. Python pode ser obtido pelo uv. O executável oficial é publicado por symlink em `~/.local/bin/siftr`; comandos de terceiros são preservados. `--bin-dir` permite outro destino. O comando estável acompanha atualizações/rollback, sem mudar o registro MCP. Não coloque a chave em argumentos nem no Git.
 
-Credenciais podem vir do ambiente (`OPENROUTER_API_KEY` ou `TYPESAFE_API_KEY`)
-ou de um cadastro pessoal persistente, fora do checkout:
+A documentação upstream também oferece `siftr agents install [CLIENTE]`. Como esse instalador resolve o symlink para um caminho de versão fixa, prefira o registro manual acima para o Codex acompanhar a versão gerenciada. Para outro cliente, use o formato oficial e o caminho estável. A integração não altera configurações de clientes automaticamente. Reinicie/reconecte clientes já abertos depois de registrar ou trocar a versão: um processo MCP existente pode continuar usando a anterior. Links pessoais não se sincronizam para Cloud/outro computador.
 
-```bash
-my-tools auth set --provider openrouter   # ou typesafe; solicita chave oculta
-my-tools doctor
-my-tools auth remove --provider openrouter
+Configuração manual equivalente no Codex:
+
+```toml
+[mcp_servers.siftr]
+command = "/caminho/absoluto/para/siftr"
+args = ["mcp"]
 ```
 
-O cadastro fica em `~/.local/share/my-tools/credentials.json` (ou MY_TOOLS_HOME),
-com permissão 600 e propriedade da conta atual. É arquivo local em texto claro,
-não um cofre criptografado. A chave não é argumento de comando nem saída de log.
-Variáveis explícitas do processo prevalecem sobre o cadastro. O adaptador
-desabilita dotenv upstream e não lê credenciais dos projetos.
-`doctor` informa presença e origem, nunca o valor. Instalação e
-verificações offline funcionam sem credenciais. Inferência requer acesso válido
-ao provedor. O cadastro local permite ao launcher reutilizar a chave depois de
-fechar o terminal; ele não configura credenciais em outros computadores/Cloud.
+Use o caminho estável, não um caminho contendo o SHA. Caso o cliente exija confirmação, configure as ferramentas individualmente conforme a autorização do consumidor; o Codex suporta `mcp_servers.siftr.tools.<nome>.approval_mode`. Não libere ferramentas adicionais por padrão. Skills de descoberta podem orientar a escolha das ferramentas; instalação não garante seleção automática em todo pedido.
 
-## Usar em um projeto
-
-Dentro da raiz ou de um subdiretório do projeto:
+## Uso nativo
 
 ```bash
-my-tools init --profile search-experimental
-my-tools enable search --provider siftr --allow-remote --glob 'src/*.ts'
-my-tools search "onde o cancelamento é processado?" --json --stats
-my-tools search "onde o cancelamento é processado?" --glob 'src/*.ts' --top 5 --json --stats
-my-tools disable search
+siftr search "onde o cancelamento é processado?" . --glob 'src/*.ts' --json --stats
+siftr read src/billing.py "onde calculamos o reembolso?" --json
+git ls-files 'tests/*.py' | siftr pick "testar o reembolso" --json
+siftr filter "qual falha aconteceu?" /caminho/saida-saneada.log --json
 ```
 
-`init` não habilita capacidades. `enable search` sem `--allow-remote` também não
-autoriza envio: a execução é bloqueada até a configuração permitir esse uso.
-O opt-in deve corresponder à autorização real para os dados do projeto.
-Não use como autorização para enviar código de terceiros/clientes sem permissão.
+Os caminhos são ilustrativos. Pelo MCP, o agente chama as mesmas operações oficiais com os nomes da tabela abaixo. Leia implementação/chamadores; resultados são sugestões e podem omitir evidência. Para símbolos exatos, `rg` normalmente é mais apropriado.
 
-`--glob` limita os arquivos elegíveis antes do ranking e pode ser repetido.
-Os padrões são relativos à raiz; `src/*.ts` também alcança subdiretórios no
-matching do Siftr. No `enable`, os padrões ficam salvos e são aplicados a cada busca. Quando existe
-escopo salvo, `search --glob` só pode selecionar padrões exatamente iguais aos
-configurados, incluindo um subconjunto; outros padrões são recusados antes da
-chamada remota. Disable/re-enable preserva o escopo. Configurações antigas sem
-`globs` mantêm o padrão upstream, mas a integração nas skills exige escopo salvo.
-O filtro não identifica segredos dentro do código. Use uma cópia saneada quando
-o checkout misturar código com dados privados. `--top 5` limita resultados,
-mas não limita sozinho todos os arquivos examinados ou enviados.
+| Ferramenta MCP | Uso |
+|---|---|
+| `semantic_search` | Comportamento sem localização confirmada |
+| `focused_read` | Parte relevante de arquivo grande |
+| `pick_relevant` | Priorizar lista de testes/arquivos, preservando gates |
+| `filter_output` | Saída existente, saneada e autorizada; experimental |
 
-A configuração `.my-tools.json` contém provider, versão, enabled, allow_remote_data e, opcionalmente, globs.
-Ela não pode conter credenciais. Por padrão, `version: approved` acompanha a versão
-ativa aceita localmente. `enable search --pin SHA_COMPLETO --allow-remote` fixa uma
-versão instalada e aceita, isolando o projeto de atualizações futuras.
-Configuração não atravessa uma raiz Git/worktree. `--project DIRETORIO` vem antes
-do subcomando, por exemplo `my-tools --project ./exemplo status`.
+## Dados e credenciais
 
-Disponibilizar o launcher não garante descoberta pelo agente. Na primeira sessão,
-peça a execução de `my-tools status` e da capacidade necessária. O CLI é usável por
-uma ferramenta de shell permitida; o alcance no desktop/cloud precisa de verificação
-no ambiente consumidor. Links locais não se sincronizam para outra máquina.
+O Siftr envia caminhos, nomes de definições e trechos ao OpenRouter/TypeSafe. Só use conteúdo autorizado para esse envio. Exclua credenciais, arquivos de ambiente, dados financeiros/de clientes e logs privados. O MCP oficial não impõe allowlist de projeto nem lê `.my-tools.json`; esse arquivo não é barreira de acesso do MCP. Caminhos e globs precisam respeitar a autorização da tarefa. `focused_read` e `filter_output` também exigem arquivos autorizados.
+
+`siftr setup` grava a chave na configuração pessoal do próprio Siftr. A fonte upstream carrega variáveis do processo, `.env` do cwd/pais e configuração pessoal; isso é comportamento oficial, sem patch nosso. O MCP precisa receber a chave pelo mecanismo oficial. O cadastro antigo `my-tools auth` não é injetado automaticamente no MCP. Ambos ficam fora do Git; não são cofres criptografados.
 
 ## Atualização e recuperação
 
 ```bash
 my-tools outdated --all
 my-tools update --all
-my-tools update siftr --accept SHA_COMPLETO_DO_CANDIDATO
+my-tools update siftr --accept SHA_COMPLETO_REVISADO
 my-tools rollback siftr
+my-tools doctor
 ```
 
-`outdated` prefere a maior tag estável `X.Y.Z`; sem tags estáveis, consulta a branch
-registrada e devolve seu SHA. `update` prepara o candidato em runtime separado,
-valida contrato/integridade e executa a suite offline do upstream. A versão ativa
-continua disponível enquanto isso acontece. SHA novo não aprovado no catálogo
-fica em `review_required`; `--accept` aceita uma única revisão explicitamente.
-Um SHA diferente do candidato atual é recusado. O estado experimental da ferramenta
-permanece até existir evidência de benefício e qualidade.
+Candidato novo permanece `review_required` até aceitação explícita, salvo revisão aprovada no catálogo. Testes offline upstream e integridade são verificados antes de ativar. Se a ferramenta já tiver integração nativa, a atualização prepara também o entrypoint oficial e confere as quatro ferramentas MCP antes de alternar o symlink. Falha antes da troca preserva o comando ativo; falha de persistência tenta restaurar a versão anterior. Uma interrupção de máquina pode exigir reconciliação; `doctor` detecta divergência entre versão gerenciada e comando nativo. `integrate --apply` reconcilia com a revisão aceita. Não há transação global entre ferramentas.
 
-Atualizar não equivale a uma auditoria do código upstream. Leia as diferenças
-antes de testar/aceitar novas revisões: as verificações executam código de terceiros.
-As verificações retiram credenciais do ambiente e bloqueiam transportes socket
-Python, mas isso não é sandbox de sistema contra código hostil.
+Mantenha runtimes anteriores para rollback. Não use `uv tool upgrade` fora do gestor para esta instalação: isso perde o vínculo com o SHA aceito. Reinicie processos MCP depois da troca. Compatibilidade offline não comprova acurácia nem ganho de produtividade; avalie qualidade antes de aceitar versões. Leitura/revisão de mudanças upstream continua necessária. Checks executam código de terceiros e não constituem sandbox de sistema contra código hostil.
 
-Uma nova revisão aprovada em `tools.json` pode ser aplicada por `update --all`
-sem aceitar o SHA manualmente. Um candidato incompatível não substitui o ativo.
-O lote informa falhas/pendências por ferramenta, sem prometer transação global.
-Rollback verifica a versão anterior antes de alternar. Pins de projetos permanecem.
-Runtimes antigos são preservados, sem coleta automática que possa invalidar pins.
-Veja [atualizações](docs/updates.md).
+## Legado e avaliação
 
-Para atualizar o próprio controlador, com checkout limpo: `git pull --ff-only`,
-rode os testes e o check público. O link acompanha esse checkout; o diagnóstico
-do adaptador detecta incompatibilidade. Isso é separado de atualizar ferramentas.
-
-## Diagnóstico e remoção
-
-- `status`: estado e configuração efetiva; sem inferência ou suite completa.
-- `doctor`: integridade, contrato CLI e suite offline; presença de credencial não
-  comprova autenticação, saldo nem disponibilidade do serviço.
-- `uninstall`: plano; `uninstall --apply` remove somente o launcher próprio.
-- `disable search`: desliga a capacidade apenas no projeto atual.
-
-Uninstall preserva configurações, runtimes e resultados. Antes de mover o checkout,
-remova o launcher próprio e recrie-o no novo local. Instalações em outros ambientes
-precisam de checkout e setup próprios.
-
-## Avaliar benefício
+`my-tools search`, `init`, `enable`, `disable` e `auth` permanecem por compatibilidade com o piloto inicial de busca pelo shell. Seus filtros e pins valem só para aquele launcher. As skills atuais usam o MCP oficial. Novas capacidades devem integrar a interface oficial do fornecedor, sem ampliar esse proxy legado.
 
 ```bash
 my-tools compare benchmarks/examples/baseline.json benchmarks/examples/candidate.json
+python3 -m unittest discover -s tests -v
+python3 scripts/check_public.py
 ```
 
-Os exemplos são **sintéticos**, não benchmarks de produtividade. O comparador exige
-casos e ambiente equivalentes, inclui falhas/bloqueios, aponta regressões e mantém
-tokens ausentes como desconhecidos. Protocolos e fixtures reutilizáveis ficam aqui;
-resultados reais permanecem nos registros autorizados do projeto.
-Veja [protocolo de busca](benchmarks/protocols/search.md), [arquitetura](docs/architecture.md)
-e [integração com skills](docs/skills.md).
+Exemplos são sintéticos. Benchmark do launcher legado não representa o pacote completo via MCP. Resultados reais ficam no registro autorizado do consumidor. Compare tarefas equivalentes, tempo total, qualidade e tokens reais; disponibilidade não prova economia de cota ChatGPT.
 
-O [fluxo de busca](docs/search-workflow.md) descreve os comandos, limites de
-escopo e decisão proporcional entre Siftr e rg.
+Veja [arquitetura](docs/architecture.md), [MCP e skills](docs/skills.md), [atualizações](docs/updates.md), [protocolo](benchmarks/protocols/search.md) e [proveniência](NOTICE.md).
 
-## Escopo da versão 0.1
-
-Somente search/Siftr tem implementação. Redução de logs, seleção de testes,
-navegador, MCP, hooks e roteamento de modelos serão integrações separadas depois
-dos respectivos pilotos. Não há atualização agendada, migração de memória,
-ativação automática em projetos ou promessa de economia de cota ChatGPT.
-
-Licença MIT para este controlador; ferramentas externas preservam suas licenças.
-Proveniência e limites estão em [NOTICE.md](NOTICE.md) e [validation](docs/validation.md).
+Licença MIT do controlador; ferramentas externas preservam suas licenças.

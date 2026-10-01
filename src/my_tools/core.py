@@ -165,7 +165,15 @@ class Manager:
             "previous": old.get("active") if old.get("active") != commit else old.get("previous"),
             "accepted": accepted,
             "catalog_commit": self.spec(name)["approved_commit"] if from_catalog else old.get("catalog_commit")}
-        self.save(state)
+        from .native import synchronize
+        # Prepare/check the official entrypoint before publishing the new SHA.
+        synchronize(self, name, commit)
+        try:
+            self.save(state)
+        except BaseException:
+            if old.get("active"):
+                synchronize(self, name, old["active"])
+            raise
 
     def install(self, name):
         active = self.state()["tools"].get(name, {}).get("active")
@@ -263,6 +271,17 @@ class Manager:
             try:
                 path = self.resolve(name)
                 ADAPTERS[spec["adapter"]].check(path, spec, entry["active"], smoke=smoke)
+                from . import native
+                official = native.registry(self)["tools"].get(name)
+                if official:
+                    exe = native.executable(self, name, entry["active"])
+                    if (official["active"] != entry["active"] or not exe.is_file()
+                            or Path(official["command"]).resolve() != exe):
+                        raise ToolError("Estado nativo diverge da versão ativa; execute integrate --apply para reconciliar")
+                    if smoke:
+                        native.check(exe)
+                    row["official_command"] = official["command"]
+                    row["mcp_tools"] = sorted(native.MCP_TOOLS)
                 row["status"] = "ready_offline"
             except ToolError as exc:
                 row.update(status="not_ready", reason=str(exc))

@@ -33,6 +33,10 @@ def parser():
     sub.add_argument("capability", choices=["search"])
     sub = commands.add_parser("install")
     sub.add_argument("tool")
+    sub = commands.add_parser("integrate")
+    sub.add_argument("tool", choices=["siftr"])
+    sub.add_argument("--apply", action="store_true")
+    sub.add_argument("--bin-dir", type=Path)
     for name in ("outdated", "update"):
         sub = commands.add_parser(name)
         group = sub.add_mutually_exclusive_group(required=True)
@@ -73,6 +77,11 @@ def main(argv=None):
             emit(compare(args.baseline, args.candidate))
             return 0
         manager = Manager()
+        if args.command == "integrate":
+            from .native import integrate
+            with manager.lock():
+                emit(integrate(manager, args.tool, args.apply, args.bin_dir))
+            return 0
         if args.command == "auth":
             from .credentials import clear, save
             if args.operation == "set":

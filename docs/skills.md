@@ -1,26 +1,18 @@
-# Integração com my-skills
+# Skills e MCPs oficiais
 
-Os procedimentos permanecem em my-skills. Este repositório fornece executáveis.
-A integração opcional cabe nas skills de descoberta de código: auditoria de
-issue, execução de resolução, mapa e investigação de arquitetura. Não é
-necessário alterar procedimentos sem essa necessidade. A orientação é:
+O agente usa a interface do fornecedor. Para o Siftr, são quatro chamadas MCP: `semantic_search`, `focused_read`, `pick_relevant` e `filter_output` experimental. Não execute `my-tools search` para substituir essas operações.
 
-> Quando nomes/termos exatos não forem conhecidos, consulte `my-tools status`.
-> Se search estiver habilitado, permitir envio e possuir globs autorizados salvos, use
-> `my-tools search "comportamento procurado" --top 5 --json --stats`.
-> O launcher aplica os caminhos/extensões do escopo salvo. Confira os arquivos
-> retornados. Se a ferramenta falhar ou os trechos forem insuficientes, use rg e
-> leitura direta. Preserve evidência necessária e regras do projeto.
+O my-tools fornece instalação e controle de versão; o my-skills mantém o procedimento. Quatro skills de descoberta orientam a escolha antes da primeira busca: auditoria de issue, resolução, mapa e arquitetura. Outras skills não são alteradas por hábito.
 
-Não é necessário criar uma skill para cada comando nem registrar outro MCP
-para usar a primeira versão. O agente precisa alcançar o launcher pelo shell
-e acessar a credencial pelo ambiente autorizado ou cadastro pessoal do launcher. Teste descoberta em uma sessão
-nova do runtime escolhido. Disponibilidade em CLI local não comprova Cloud.
+- Localização confirmada por arquivo/trecho/contexto: leitura direta.
+- Símbolo ou mensagem exata: rg.
+- Comportamento sem localização confirmada: semantic_search primeiro.
+- Arquivo grande e pergunta localizada: focused_read.
+- Lista longa de testes/arquivos: pick_relevant, sem dispensar gates.
+- Log existente saneado/autorizado: filter_output, experimental.
 
-Este pacote não edita skills nem ativa consumidores automaticamente. A integração
-precisa estar na fonte canônica do my-skills, com configuração local explícita por
-consumidor. Links existentes acompanham a edição. Valide uma chamada real em
-conversa nova; isso comprova disponibilidade, sem prometer seleção em todo pedido.
+Ausência/falha/resultado insuficiente: busca local e leitura direta. Confira chamadores e contratos. Sugestão não prova ausência nem implementação ativa. Não repita descoberta com contexto já conhecido.
 
-Veja o [fluxo proporcional de busca](search-workflow.md) para decisão entre
-rg/Siftr, leitura de chamadores, fallback e interpretação das métricas.
+O MCP oficial precisa estar conectado na sessão, receber a chave pelo setup do Siftr e acessar arquivos autorizados. Não usa os filtros `.my-tools.json` do proxy legado. Skills orientam escolhas, não impõem isolamento de filesystem nem autorização de envio. Outro ambiente precisa de instalação/configuração próprias.
+
+Teste o caminho real em sessão nova, confira as chamadas e avalie a resposta. Invocação explícita de skill não comprova seleção implícita universal. Compare ganho em tarefas equivalentes; a integração anterior apenas de busca deve permanecer rotulada como tal.

@@ -30,3 +30,11 @@ o resultado individual de todas as ferramentas. Não há atualização em backgr
 O controlador é atualizado pelo Git separado dos programas externos. O catálogo
 revisado pertence a commits públicos deste repositório. Não modifique runtimes
 instalados diretamente: isso invalida a verificação de integridade.
+
+## Entrypoints oficiais
+
+Depois de `integrate siftr --apply`, update/rollback também prepara e verifica o MCP oficial e troca o symlink estável. O registro do cliente precisa apontar para esse symlink; reinicie processos existentes para carregar a nova versão. Runtimes anteriores são preservados.
+
+Pins `.my-tools.json` pertencem ao launcher legado, não ao MCP global. Um MCP usa a versão do executável registrado no cliente. Compatibilidade offline não comprova qualidade do pacote.
+
+O estado principal, registro nativo e symlink são arquivos distintos. A restauração após falha de persistência é compensatória: falhas múltiplas/quedas podem deixar divergência. `my-tools doctor` identifica divergência e retorna falha; `my-tools integrate siftr --apply` reconcilia com a versão aceita no estado principal. Isso não instala candidato pendente nem apaga runtimes de recuperação.

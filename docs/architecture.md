@@ -1,6 +1,17 @@
 # Arquitetura
 
-## Fluxo
+## Fluxo nativo
+
+```text
+my-tools: catálogo/SHA → fonte verificada → uv tool install → entrypoint oficial
+cliente MCP → siftr mcp → handlers oficiais → provedor → resultado ao agente
+```
+
+`native.json` registra comando estável e SHA instalado. Cada SHA tem seu diretório de ferramentas uv. O symlink estável muda somente depois da checagem MCP. Atualização/rollback de ferramenta já integrada sincroniza esse comando; processos existentes precisam reconectar. O gestor não participa das chamadas MCP nem injeta filtros/credenciais.
+
+O catálogo de primeira implementação ainda tem `capability: search` para compatibilidade do controlador legado; isso não limita o MCP oficial, que oferece as quatro ferramentas. Novas ferramentas precisam de integração explícita e registrada de suas interfaces nativas, não de novos aliases de operação.
+
+## Fluxo legado
 
 ```text
 skill ou usuário
@@ -31,7 +42,7 @@ decisões distintas. `experimental` no catálogo registra essa diferença.
 
 ## Acrescentar uma ferramenta
 
-1. Identificar uma tarefa, baseline e critério de aceite.
+1. Identificar uma tarefa, baseline e critério de aceite; preferir a instalação e interface oficial do fornecedor.
 2. Registrar fonte HTTPS pública, licença, SHA revisado, capacidade e credenciais
    por nome de variável, nunca por valor.
 3. Implementar um módulo em `src/my_tools/` com `prepare` e `check`; registrar
