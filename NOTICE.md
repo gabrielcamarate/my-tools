@@ -9,9 +9,7 @@ integrada inicialmente é `4984c23dd338596a2ec62d836f742d98e7bb4722`.
 O código upstream é obtido durante instalação e fica no armazenamento local,
 sem cópia ou atribuição de autoria ao controlador. Seu LICENSE permanece na fonte.
 
-O adaptador desabilita o carregamento automático de dotenv, oferece interface
-de busca delimitada e não chama o instalador upstream de MCPs/agentes.
-Isso é uma integração própria, não uma promessa de suporte oficial do upstream.
+A interface do agente é a CLI/MCP oficial gerada pelo uv, sem alteração da fonte upstream. O controlador gerencia origem e revisões; não é um serviço do fornecedor nem promessa de suporte oficial.
 
 TypeSafe/Jev e OpenRouter são provedores externos. Este repositório não redistribui
 modelos e não contém credenciais, resultados privados ou garantia de benefício.

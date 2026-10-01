@@ -63,9 +63,9 @@ Os caminhos são ilustrativos. Pelo MCP, o agente chama as mesmas operações of
 
 ## Dados e credenciais
 
-O Siftr envia caminhos, nomes de definições e trechos ao OpenRouter/TypeSafe. Só use conteúdo autorizado para esse envio. Exclua credenciais, arquivos de ambiente, dados financeiros/de clientes e logs privados. O MCP oficial não impõe allowlist de projeto nem lê `.my-tools.json`; esse arquivo não é barreira de acesso do MCP. Caminhos e globs precisam respeitar a autorização da tarefa. `focused_read` e `filter_output` também exigem arquivos autorizados.
+O Siftr envia caminhos, nomes de definições e trechos ao OpenRouter/TypeSafe. Só use conteúdo autorizado para esse envio. Exclua credenciais, arquivos de ambiente, dados financeiros/de clientes e logs privados. O MCP oficial não impõe allowlist de projeto por projeto. Caminhos e globs precisam respeitar a autorização da tarefa. `focused_read` e `filter_output` também exigem arquivos autorizados.
 
-`siftr setup` grava a chave na configuração pessoal do próprio Siftr. A fonte upstream carrega variáveis do processo, `.env` do cwd/pais e configuração pessoal; isso é comportamento oficial, sem patch nosso. O MCP precisa receber a chave pelo mecanismo oficial. O cadastro antigo `my-tools auth` não é injetado automaticamente no MCP. Ambos ficam fora do Git; não são cofres criptografados.
+`siftr setup` grava a chave na configuração pessoal do próprio Siftr. A fonte upstream carrega variáveis do processo, `.env` do cwd/pais e configuração pessoal; isso é comportamento oficial, sem patch nosso. O MCP precisa receber a chave pelo mecanismo oficial. A chave fica fora do Git, em armazenamento pessoal; não é um cofre criptografado.
 
 ## Atualização e recuperação
 
@@ -81,9 +81,7 @@ Candidato novo permanece `review_required` até aceitação explícita, salvo re
 
 Mantenha runtimes anteriores para rollback. Não use `uv tool upgrade` fora do gestor para esta instalação: isso perde o vínculo com o SHA aceito. Reinicie processos MCP depois da troca. Compatibilidade offline não comprova acurácia nem ganho de produtividade; avalie qualidade antes de aceitar versões. Leitura/revisão de mudanças upstream continua necessária. Checks executam código de terceiros e não constituem sandbox de sistema contra código hostil.
 
-## Legado e avaliação
-
-`my-tools search`, `init`, `enable`, `disable` e `auth` permanecem por compatibilidade com o piloto inicial de busca pelo shell. Seus filtros e pins valem só para aquele launcher. As skills atuais usam o MCP oficial. Novas capacidades devem integrar a interface oficial do fornecedor, sem ampliar esse proxy legado.
+## Avaliação
 
 ```bash
 my-tools compare benchmarks/examples/baseline.json benchmarks/examples/candidate.json
@@ -91,7 +89,7 @@ python3 -m unittest discover -s tests -v
 python3 scripts/check_public.py
 ```
 
-Exemplos são sintéticos. Benchmark do launcher legado não representa o pacote completo via MCP. Resultados reais ficam no registro autorizado do consumidor. Compare tarefas equivalentes, tempo total, qualidade e tokens reais; disponibilidade não prova economia de cota ChatGPT.
+Exemplos são sintéticos. Resultados reais ficam no registro autorizado do consumidor. Compare tarefas equivalentes, tempo total, qualidade e tokens reais; disponibilidade não prova economia de cota ChatGPT.
 
 Veja [arquitetura](docs/architecture.md), [MCP e skills](docs/skills.md), [atualizações](docs/updates.md), [protocolo](benchmarks/protocols/search.md) e [proveniência](NOTICE.md).
 

@@ -11,15 +11,14 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from my_tools.core import Manager, ToolError, ROOT, atomic_json, checked, project_config, project_root, setup, uninstall_launcher
+from my_tools.core import Manager, ToolError, ROOT, atomic_json, checked, setup, uninstall_launcher
 from my_tools import cli
 from my_tools import __version__
-from my_tools.siftr import command
 
 
 FAKE = '''import sys, json, os
 def load_env():
-    raise RuntimeError("dotenv loading must be disabled by the adapter")
+    pass
 def main():
     load_env()
     args = sys.argv[1:]
@@ -83,7 +82,7 @@ class Offline(unittest.TestCase):
     def invoke(self, *args):
         out, err = io.StringIO(), io.StringIO()
         with patch("my_tools.cli.Manager", return_value=self.manager), redirect_stdout(out), redirect_stderr(err):
-            code = cli.main(["--project", str(self.project), *args])
+            code = cli.main([*args])
         return code, out.getvalue(), err.getvalue()
 
     def test_install_is_idempotent_and_runtime_relocates(self):
@@ -94,7 +93,7 @@ class Offline(unittest.TestCase):
         self.assertIsNone(entry["previous"])
         self.assertEqual(self.manager.doctor()["tools"][0]["status"], "ready_offline")
 
-    def test_unreviewed_update_does_not_change_active_or_allow_pin(self):
+    def test_unreviewed_update_does_not_change_active_or_allow_resolution(self):
         self.manager.install("siftr")
         second = self.next()
         result = self.manager.update("siftr")
@@ -103,7 +102,7 @@ class Offline(unittest.TestCase):
         with self.assertRaises(ToolError):
             self.manager.resolve("siftr", second)
 
-    def test_accept_update_rollback_and_project_pin(self):
+    def test_accept_update_and_rollback(self):
         self.manager.install("siftr")
         second = self.next()
         self.manager.update("siftr", accept=second)
@@ -130,7 +129,7 @@ class Offline(unittest.TestCase):
         self.manager.install("siftr")
         second = self.next()
         self.manager.update("siftr", accept=second)
-        (self.manager.location("siftr", self.first) / "runner.py").write_text("broken")
+        (self.manager.location("siftr", self.first) / "source/siftr/cli.py").write_text("broken")
         with self.assertRaises(ToolError):
             self.manager.rollback("siftr")
         self.assertEqual(self.manager.state()["tools"]["siftr"]["active"], second)
@@ -181,7 +180,7 @@ class Offline(unittest.TestCase):
         with self.assertRaises(ToolError):
             self.manager.resolve("siftr")
 
-    def test_dependency_change_requires_adapter_review(self):
+    def test_dependency_change_requires_installer_review(self):
         self.manager.install("siftr")
         (self.repository / "pyproject.toml").write_text('[project]\nname="siftr"\ndependencies=["unexpected"]\n')
         second = self.commit("dependencies")
@@ -208,46 +207,9 @@ class Offline(unittest.TestCase):
         uninstall_launcher(bin_dir=folder, apply=True)
         self.assertFalse(target.exists())
 
-    def test_project_boundaries_include_worktree_git_file(self):
-        atomic_json(self.base / ".my-tools.json", {"schema_version": 1, "capabilities": {}})
-        child = self.project / "src"
-        child.mkdir()
-        self.assertEqual(project_root(child), self.project)
-        (self.project / ".git").rmdir()
-        (self.project / ".git").write_text("gitdir: ../worktree")
-        self.assertEqual(project_root(child), self.project)
 
-    def test_project_init_enable_disable_and_remote_opt_in(self):
-        self.manager.install("siftr")
-        self.assertEqual(self.invoke("init")[0], 0)
-        before = (self.project / ".my-tools.json").read_text()
-        self.assertEqual(self.invoke("init")[0], 2)
-        self.assertEqual((self.project / ".my-tools.json").read_text(), before)
-        self.assertEqual(self.invoke("enable", "search")[0], 0)
-        with patch("my_tools.siftr.search") as operation:
-            self.assertEqual(self.invoke("search", "question")[0], 2)
-            operation.assert_not_called()
-        self.assertEqual(self.invoke("enable", "search", "--allow-remote", "--pin", self.first)[0], 0)
-        with patch("my_tools.siftr.search", return_value=7) as operation:
-            self.assertEqual(self.invoke("search", "question", "--json")[0], 7)
-            self.assertEqual(operation.call_args.args[1], self.project)
-        self.assertEqual(self.invoke("disable", "search")[0], 0)
-        self.assertEqual(self.invoke("search", "question")[0], 2)
 
-    def test_explicit_nested_init_creates_separate_config(self):
-        fixture = self.project / "fixture"
-        fixture.mkdir()
-        with patch("my_tools.cli.Manager", return_value=self.manager), redirect_stdout(io.StringIO()):
-            self.assertEqual(cli.main(["--project", str(fixture), "init"]), 0)
-        self.assertTrue((fixture / ".my-tools.json").exists())
-        self.assertFalse((self.project / ".my-tools.json").exists())
-        self.assertEqual(project_root(fixture), fixture)
 
-    def test_unknown_project_fields_are_not_echoed(self):
-        atomic_json(self.project / ".my-tools.json", {"schema_version": 1, "capabilities": {}, "private": "do not echo"})
-        code, out, err = self.invoke("status")
-        self.assertEqual(code, 2)
-        self.assertNotIn("do not echo", out + err)
 
     def test_update_all_reports_failure_and_continues_other_tools(self):
         self.manager.tools["second"] = self.manager.tools["siftr"].copy()
@@ -256,44 +218,8 @@ class Offline(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual([r["status"] for r in json.loads(out)["tools"]], ["failed", "current"])
 
-    def test_search_keeps_json_and_exit_code_without_shell_interpolation(self):
-        self.manager.install("siftr")
-        path = self.manager.resolve("siftr")
-        query = 'literal $(touch SHOULD_NOT_EXIST); `echo unsafe`'
-        result = subprocess.run(command(path, ["search", query, str(self.project), "--json"]), cwd=self.project,
-                                capture_output=True, text=True)
-        self.assertEqual(json.loads(result.stdout)["query"], query)
-        self.assertFalse((self.project / "SHOULD_NOT_EXIST").exists())
-        result = subprocess.run(command(path, ["search", "EXIT7", str(self.project)]), capture_output=True)
-        self.assertEqual(result.returncode, 7)
-        self.assertIn(b"fixture stderr", result.stderr)
 
-    def test_search_scope_reaches_runtime_as_separate_literal_arguments(self):
-        self.manager.install("siftr")
-        self.invoke("init")
-        self.invoke("enable", "search", "--allow-remote")
-        from my_tools.siftr import search
-        path = self.manager.resolve("siftr")
-        output = self.base / "output.json"
-        original = subprocess.run
-        with output.open("w") as stdout:
-            # Real adapter process; the fixture records the upstream arguments.
-            with patch("my_tools.siftr.subprocess.run", wraps=subprocess.run) as operation:
-                operation.side_effect = lambda *a, **kw: original(*a, **kw, stdout=stdout)
-                code = search(path, self.project, "question", globs=["src/*.ts", "tests/* $(touch SHOULD_NOT_EXIST)"])
-        self.assertEqual(code, 0)
-        self.assertEqual(json.loads(output.read_text())["args"],
-                         ["--top", "10", "--glob", "src/*.ts", "--glob", "tests/* $(touch SHOULD_NOT_EXIST)"])
-        self.assertFalse((self.project / "SHOULD_NOT_EXIST").exists())
-        with patch("my_tools.siftr.search", return_value=0) as operation:
-            self.assertEqual(self.invoke("search", "question", "--glob", "src/*.ts", "--glob", "tests/*.ts")[0], 0)
-            self.assertEqual(operation.call_args.kwargs["globs"], ["src/*.ts", "tests/*.ts"])
 
-    def test_invalid_search_scopes_never_start_adapter(self):
-        with patch("my_tools.siftr.search") as operation:
-            for pattern in ("", " ", "/private/*", "../*", "src/../*", "src\n*"):
-                self.assertEqual(self.invoke("search", "question", "--glob", pattern)[0], 2)
-            operation.assert_not_called()
 
     def test_controller_save_failure_restores_registered_native_version(self):
         self.manager.install("siftr")
@@ -315,36 +241,7 @@ class Offline(unittest.TestCase):
         self.assertEqual(row["status"], "not_ready")
         self.assertIn("diverge", row["reason"])
 
-    def test_saved_scope_is_default_and_cannot_be_widened_by_search(self):
-        self.manager.install("siftr")
-        self.invoke("init")
-        self.assertEqual(self.invoke("enable", "search", "--allow-remote", "--glob", "src/*.ts", "--glob", "tests/*.ts")[0], 0)
-        with patch("my_tools.siftr.search", return_value=0) as operation:
-            self.assertEqual(self.invoke("search", "question")[0], 0)
-            self.assertEqual(operation.call_args.kwargs["globs"], ["src/*.ts", "tests/*.ts"])
-            self.assertEqual(self.invoke("search", "question", "--glob", "tests/*.ts")[0], 0)
-            self.assertEqual(operation.call_args.kwargs["globs"], ["tests/*.ts"])
-            operation.reset_mock()
-            self.assertEqual(self.invoke("search", "question", "--glob", "*")[0], 2)
-            operation.assert_not_called()
-        self.invoke("disable", "search")
-        self.invoke("enable", "search", "--allow-remote")
-        self.assertEqual(project_config(self.project)["capabilities"]["search"]["globs"], ["src/*.ts", "tests/*.ts"])
 
-    def test_invalid_saved_scopes_fail_before_runtime_and_preserve_config(self):
-        self.invoke("init")
-        before = (self.project / ".my-tools.json").read_bytes()
-        with patch.object(self.manager, "resolve") as resolve:
-            self.assertEqual(self.invoke("enable", "search", "--allow-remote", "--glob", "../*")[0], 2)
-            resolve.assert_not_called()
-        self.assertEqual((self.project / ".my-tools.json").read_bytes(), before)
-        for globs in ([], "src/*.ts", [None], ["/private/*"], ["src/../*"], ["\\private\\*"]):
-            atomic_json(self.project / ".my-tools.json", {"schema_version": 1, "capabilities": {
-                "search": {"provider": "siftr", "version": "approved", "enabled": True,
-                           "allow_remote_data": True, "globs": globs}}})
-            with patch("my_tools.siftr.search") as operation:
-                self.assertEqual(self.invoke("search", "question")[0], 2)
-                operation.assert_not_called()
 
     def test_update_all_pending_exit_and_accept_all_rejected(self):
         self.manager.install("siftr")
@@ -352,6 +249,14 @@ class Offline(unittest.TestCase):
         self.assertEqual(self.invoke("update", "--all")[0], 2)
         self.assertEqual(self.invoke("update", "--all", "--accept", second)[0], 2)
         self.assertEqual(self.manager.state()["tools"]["siftr"]["active"], self.first)
+
+    def test_removed_operations_are_rejected_before_management(self):
+        for name in ("search", "auth", "init", "enable", "disable"):
+            with patch("my_tools.cli.Manager") as manager, redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as error:
+                    cli.main([name])
+                self.assertEqual(error.exception.code, 2)
+                manager.assert_not_called()
 
     def test_corrupt_state_fails_closed(self):
         atomic_json(self.manager.home / "state.json", {"schema_version": 1, "tools": {"siftr": "invalid"}})
@@ -364,12 +269,6 @@ class Offline(unittest.TestCase):
                 with Manager(home=self.manager.home).lock():
                     pass
 
-    def test_project_config_symlink_is_not_modified(self):
-        foreign = self.base / "foreign.json"
-        atomic_json(foreign, {"schema_version": 1, "capabilities": {}})
-        (self.project / ".my-tools.json").symlink_to(foreign)
-        self.assertEqual(self.invoke("disable", "search")[0], 2)
-        self.assertEqual(json.loads(foreign.read_text())["capabilities"], {})
 
 
 if __name__ == "__main__":

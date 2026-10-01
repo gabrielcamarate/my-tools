@@ -1,68 +1,27 @@
 # Arquitetura
 
-## Fluxo nativo
-
 ```text
 my-tools: catálogo/SHA → fonte verificada → uv tool install → entrypoint oficial
 cliente MCP → siftr mcp → handlers oficiais → provedor → resultado ao agente
 ```
 
-`native.json` registra comando estável e SHA instalado. Cada SHA tem seu diretório de ferramentas uv. O symlink estável muda somente depois da checagem MCP. Atualização/rollback de ferramenta já integrada sincroniza esse comando; processos existentes precisam reconectar. O gestor não participa das chamadas MCP nem injeta filtros/credenciais.
+O gestor não participa das chamadas do agente. Não há proxy, cadastro de chave próprio, perfis ou configuração por projeto. O catálogo registra origem, licença, SHA aceito e instalador. O my-skills orienta a escolha das ferramentas oficiais.
 
-O catálogo de primeira implementação ainda tem `capability: search` para compatibilidade do controlador legado; isso não limita o MCP oficial, que oferece as quatro ferramentas. Novas ferramentas precisam de integração explícita e registrada de suas interfaces nativas, não de novos aliases de operação.
+`state.json` registra versões aceitas, ativa e anterior. `tools/<nome>/<sha>/` contém fonte Git verificada, hashes e um Python isolado usado somente para checagens offline. Não há runner nem alteração do carregamento de credenciais upstream. `native/<nome>/<sha>/` contém a instalação oficial gerada pelo uv.
 
-## Fluxo legado
-
-```text
-skill ou usuário
-    -> launcher my-tools
-    -> configuração da raiz do projeto
-    -> capacidade e provider habilitados
-    -> versão aceita (ou pin)
-    -> adaptador
-    -> runtime isolado
-    -> stdout/stderr e exit code originais
-```
-
-O launcher resolve o checkout canônico mesmo por symlink. O controlador não usa
-shell para montar chamadas. O armazenamento contém `state.json` e
-`tools/<nome>/<sha>/`; cada runtime tem fonte Git, venv sem dependências externas,
-runner e registro de origem/hash. Essa estratégia é específica do Siftr atual,
-cujo `pyproject.toml` não declara dependências. Uma mudança nisso exige revisão
-do adaptador, em vez de instalar dependências arbitrárias automaticamente.
-
-O venv é executado pelo caminho direto do Python, sem depender de scripts de
-ativação que apontem para o diretório staging anterior. A preparação é verificada
-novamente depois da mudança de diretório. Alterações no estado usam replace
-atômico e lock POSIX não bloqueante para mutações concorrentes.
-
-`approved` na configuração significa a revisão **ativa aceita localmente**, não
-qualidade Jev comprovada. Aceitação de atualização e adoção no workflow são
-decisões distintas. `experimental` no catálogo registra essa diferença.
+`native.json` registra comando estável e SHA instalado. Atualização/rollback de ferramenta integrada verifica o contrato MCP antes de trocar o symlink. Processos existentes precisam reconectar. Persistência usa replace atômico e lock POSIX; restauração entre arquivos é compensatória. `doctor` detecta divergência; `integrate --apply` reconcilia a revisão aceita.
 
 ## Acrescentar uma ferramenta
 
-1. Identificar uma tarefa, baseline e critério de aceite; preferir a instalação e interface oficial do fornecedor.
-2. Registrar fonte HTTPS pública, licença, SHA revisado, capacidade e credenciais
-   por nome de variável, nunca por valor.
-3. Implementar um módulo em `src/my_tools/` com `prepare` e `check`; registrar
-   explicitamente em `adapters.py`. O catálogo não importa módulos arbitrários.
-4. Estender a validação do catálogo/configuração e o comando da capacidade.
-5. Testar instalações isoladas, falhas antes da ativação, rollback e pins.
-6. Documentar envio de dados, contratos, fallback e matriz de compatibilidade.
-7. Executar o piloto; manter experimental ou aprovar para um uso delimitado.
+1. Definir tarefa, baseline e critério de aceite.
+2. Registrar origem HTTPS pública, licença e SHA revisado.
+3. Implementar somente o ciclo de instalação/verificação em `installers.py` e registrar a interface oficial em `native.py`.
+4. Testar candidato inválido, preservação do ativo, falha de persistência e rollback.
+5. Documentar instalação oficial, envio de dados e procedimento de avaliação.
+6. Orientar uso nas skills pertinentes e medir tarefas equivalentes.
 
-O catálogo expõe apenas ferramentas efetivamente integradas. Não contém nomes
-de candidatos como se estivessem implementados. Os perfis são configuração
-portável sem caminhos pessoais ou segredos. As regras dos projetos prevalecem.
+Não crie aliases de operações. O catálogo inclui somente ferramentas integradas. Instalação não concede autorização de envio de dados, merge ou deploy.
 
 ## Limites
 
-- Instalação por Git exige rede; inferência exige rede e credencial própria.
-- Isolamento de venv não é isolamento de rede, filesystem ou permissões.
-- Hashes detectam alteração acidental da instalação; não são defesa contra um
-  invasor com controle da conta e do registro de hashes.
-- Falha de processo/compatibilidade deixa o ativo intacto. Falha de máquina/disco
-  durante persistência ainda requer reconciliação do estado.
-- Não há coleta automática de runtimes antigos ou registro global de todos os
-  projetos consumidores. Isso evita eliminar versões ainda fixadas em projetos.
+Instalação e inferência exigem rede; inferência exige credencial oficial. Venv e checagens offline não são sandbox de segurança contra código hostil. Hashes detectam mudanças acidentais; não protegem de um invasor que controla a conta e os registros. Versões oficiais anteriores são mantidas para rollback. Aceitação técnica não comprova qualidade de decisões nem economia de tokens.

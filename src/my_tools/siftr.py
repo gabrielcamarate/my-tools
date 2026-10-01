@@ -1,8 +1,7 @@
-"""Adapter for Siftr's dependency-free Python CLI, pinned to Git commits."""
+"""Fetch and verify official Siftr source; no agent-call wrapper."""
 import hashlib
 import os
 from pathlib import Path
-import subprocess
 import tempfile
 import tomllib
 import venv
@@ -10,39 +9,17 @@ import venv
 from .core import ToolError, atomic_json, checked, read_json
 
 
-BOOTSTRAP = '''import sys
-from pathlib import Path
-import os
-if os.environ.get("MY_TOOLS_OFFLINE_CHECK") == "1":
-    import socket
-    def blocked(*args, **kwargs):
-        raise OSError("network disabled for offline check")
-    socket.socket.connect = blocked
-    socket.socket.connect_ex = blocked
-    socket.create_connection = blocked
-sys.path.insert(0, str(Path(__file__).resolve().parent / "source"))
-from siftr import cli
-# Credentials must come from the process environment. Never read project .env files.
-cli.load_env = lambda: None
-raise SystemExit(cli.main())
-'''
-
-
-def command(path, args):
-    return [str(Path(path) / "venv/bin/python"), "-I", str(Path(path) / "runner.py"), *args]
-
-
 def hashes(path):
-    files = [Path(path) / "runner.py"]
-    files += sorted((Path(path) / "source/siftr").rglob("*.py"))
+    source = Path(path) / "source"
+    files = sorted((source / "siftr").rglob("*.py"))
+    files += [source / "pyproject.toml"]
     return {str(p.relative_to(path)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
 
 
 def offline_env(home):
     # Offline checks neither inherit credentials nor source local dotenv files.
     return {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
-            "XDG_CONFIG_HOME": str(Path(home) / ".config"), "PYTHONDONTWRITEBYTECODE": "1",
-            "MY_TOOLS_OFFLINE_CHECK": "1"}
+            "XDG_CONFIG_HOME": str(Path(home) / ".config"), "PYTHONDONTWRITEBYTECODE": "1"}
 
 
 def prepare(path, spec, commit):
@@ -57,19 +34,18 @@ def prepare(path, spec, commit):
     with (source / "pyproject.toml").open("rb") as stream:
         project = tomllib.load(stream).get("project", {})
     if project.get("dependencies") != [] or project.get("name") != "siftr":
-        raise ToolError("Upstream mudou dependências/contrato de instalação; adaptador precisa de revisão")
+        raise ToolError("Upstream mudou dependências/contrato de instalação; instalador precisa de revisão")
     venv.EnvBuilder(with_pip=False).create(Path(path) / "venv")
-    (Path(path) / "runner.py").write_text(BOOTSTRAP)
     atomic_json(Path(path) / "installation.json", {"schema_version": 1, "commit": commit,
-                "repository": spec["repository"], "adapter": spec["adapter"], "hashes": hashes(path)})
+                "repository": spec["repository"], "installer": spec["installer"], "hashes": hashes(path)})
 
 
 def check(path, spec, commit, smoke=True):
     path = Path(path)
     record = read_json(path / "installation.json")
     if any(record.get(k) != expected for k, expected in
-           (("commit", commit), ("repository", spec["repository"]), ("adapter", spec["adapter"]))):
-        raise ToolError("Instalação não corresponde à origem/versão/adaptador")
+           (("commit", commit), ("repository", spec["repository"]), ("installer", spec["installer"]))):
+        raise ToolError("Instalação não corresponde à origem/versão/instalador")
     if hashes(path) != record.get("hashes"):
         raise ToolError("Arquivos instalados foram alterados; candidato não pode ser usado")
     if not (path / "venv/bin/python").exists():
@@ -78,10 +54,13 @@ def check(path, spec, commit, smoke=True):
         return
     with tempfile.TemporaryDirectory(prefix="my-tools-offline-") as temporary:
         env = offline_env(temporary)
-        help_text = checked(command(path, ["search", "--help"]), cwd=temporary, env=env, timeout=30)
+        # Execute the upstream CLI unchanged, only for offline contract checks.
+        probe = 'import sys; sys.path.insert(0, sys.argv.pop(1)); from siftr.cli import main; raise SystemExit(main())'
+        argv = [str(path / "venv/bin/python"), "-I", "-c", probe, str(path / "source")]
+        help_text = checked([*argv, "search", "--help"], cwd=temporary, env=env, timeout=30)
         if not all(word in help_text for word in ("query", "--json", "--top", "--glob")):
-            raise ToolError("Contrato do comando search mudou")
-        checked(command(path, ["--version"]), cwd=temporary, env=env, timeout=30)
+            raise ToolError("Contrato da CLI oficial mudou")
+        checked([*argv, "--version"], cwd=temporary, env=env, timeout=30)
         # Disable Python socket transports before loading upstream tests. This is
         # an offline check, not a security sandbox against hostile upstream code.
         suite = '''import socket, sys, runpy
@@ -97,16 +76,3 @@ runpy.run_module("unittest", run_name="__main__")
         checked([str(path / "venv/bin/python"), "-I", "-c", suite],
                 cwd=path / "source", env=env, timeout=120)
 
-
-def search(path, root, query, top=10, json_output=False, stats=False, env=None, globs=None):
-    args = ["search", query, str(root), "--top", str(top)]
-    for pattern in globs or ():
-        args.extend(["--glob", pattern])
-    if json_output:
-        args.append("--json")
-    if stats:
-        args.append("--stats")
-    try:
-        return subprocess.run(command(path, args), cwd=root, env=env, check=False).returncode
-    except OSError as exc:
-        raise ToolError("Não foi possível iniciar Siftr") from exc

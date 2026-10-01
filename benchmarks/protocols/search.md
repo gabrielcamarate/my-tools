@@ -19,8 +19,7 @@ não conhece o nome do comportamento. Consulta lexical exata continua como contr
 
 ## Fixture sintética
 
-Pasta: `benchmarks/fixtures/search-project`. Inicialize a configuração ali antes
-de executar o piloto. `enable --allow-remote` autoriza somente essa pasta sintética.
+Pasta: `benchmarks/fixtures/search-project`. Use a CLI oficial `siftr search` ou a ferramenta MCP `semantic_search`, com caminho explícito para essa fixture. Mantenha o escopo autorizado da sessão.
 
 | Pergunta | Evidência essencial |
 |---|---|

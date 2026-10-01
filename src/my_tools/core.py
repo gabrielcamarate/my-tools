@@ -70,8 +70,8 @@ def catalog(root=ROOT):
             raise ToolError("Commit aprovado precisa ser SHA completo")
         if not re.fullmatch(r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git", spec.get("repository", "")):
             raise ToolError("Origem precisa ser repositório GitHub HTTPS sem credenciais")
-        if spec.get("adapter") != "siftr-v1" or spec.get("capability") != "search":
-            raise ToolError("Adaptador/capacidade ainda não suportado")
+        if spec.get("installer") != "siftr-source-v1":
+            raise ToolError("Instalador ainda não suportado")
         if not re.fullmatch(r"[A-Za-z0-9_./-]+", spec.get("branch", "")) or ".." in spec["branch"]:
             raise ToolError("Branch inválida")
     return tools
@@ -130,22 +130,22 @@ class Manager:
         return self.home / "tools" / name / commit
 
     def prepare(self, name, commit):
-        from .adapters import ADAPTERS
+        from .installers import INSTALLERS
         spec = self.spec(name)
-        adapter = ADAPTERS[spec["adapter"]]
+        installer = INSTALLERS[spec["installer"]]
         target = self.location(name, commit)
         if target.exists():
-            adapter.check(target, spec, commit)
+            installer.check(target, spec, commit)
             return target
         target.parent.mkdir(parents=True, exist_ok=True)
         stage = target.parent / f".staging-{uuid.uuid4().hex}"
         stage.mkdir(mode=0o700)
         try:
-            adapter.prepare(stage, spec, commit)
-            adapter.check(stage, spec, commit)
+            installer.prepare(stage, spec, commit)
+            installer.check(stage, spec, commit)
             os.replace(stage, target)
             # Proves the runtime survives moving out of staging.
-            adapter.check(target, spec, commit)
+            installer.check(target, spec, commit)
         except BaseException:
             shutil.rmtree(stage, ignore_errors=True)
             # A published but invalid candidate never becomes active.
@@ -155,9 +155,9 @@ class Manager:
         return target
 
     def activate(self, name, commit, from_catalog=False):
-        from .adapters import ADAPTERS
+        from .installers import INSTALLERS
         spec = self.spec(name)
-        ADAPTERS[spec["adapter"]].check(self.location(name, commit), spec, commit)
+        INSTALLERS[spec["installer"]].check(self.location(name, commit), spec, commit)
         state = self.state()
         old = state["tools"].get(name, {})
         accepted = list(dict.fromkeys([*old.get("accepted", []), commit]))
@@ -248,17 +248,15 @@ class Manager:
             if not version:
                 raise ToolError("Ferramenta não instalada; execute install")
         if version not in entry.get("accepted", []):
-            raise ToolError("Candidato preparado ainda não foi aceito; não pode ser fixado no projeto")
+            raise ToolError("Candidato preparado ainda não foi aceito; não pode ser ativado")
         path = self.location(name, version)
-        from .adapters import ADAPTERS
+        from .installers import INSTALLERS
         spec = self.spec(name)
-        ADAPTERS[spec["adapter"]].check(path, spec, version, smoke=False)
+        INSTALLERS[spec["installer"]].check(path, spec, version, smoke=False)
         return path
 
     def doctor(self, smoke=True):
-        from .adapters import ADAPTERS
-        from .credentials import effective
-        effective_env, credential_source = effective(self.home)
+        from .installers import INSTALLERS
         rows = []
         state = self.state()
         for name, spec in self.tools.items():
@@ -266,11 +264,9 @@ class Manager:
             row = {"tool": name, "active": entry.get("active"),
                    "previous": entry.get("previous"), "adoption": spec["status"],
                    "credential_in_environment": any(bool(os.environ.get(k)) for k in spec["credential_environment"])}
-            row["credential_available"] = any(bool(effective_env.get(k)) for k in spec["credential_environment"])
-            row["credential_source"] = credential_source
             try:
                 path = self.resolve(name)
-                ADAPTERS[spec["adapter"]].check(path, spec, entry["active"], smoke=smoke)
+                INSTALLERS[spec["installer"]].check(path, spec, entry["active"], smoke=smoke)
                 from . import native
                 official = native.registry(self)["tools"].get(name)
                 if official:
@@ -287,56 +283,6 @@ class Manager:
                 row.update(status="not_ready", reason=str(exc))
             rows.append(row)
         return {"schema_version": 1, "tools": rows}
-
-
-def project_root(start):
-    here = Path(start).expanduser().resolve()
-    if not here.is_dir():
-        raise ToolError("Projeto precisa ser diretório existente")
-    for folder in (here, *here.parents):
-        if (folder / ".my-tools.json").exists():
-            return folder
-        if (folder / ".git").exists():
-            return folder
-    return here
-
-
-def validate_globs(patterns):
-    if not isinstance(patterns, list) or not patterns or any(
-        not isinstance(pattern, str) or not pattern.strip()
-        or pattern.startswith(("-", "/", "\\"))
-        or ".." in pattern.replace("\\", "/").split("/")
-        or any(c in pattern for c in ("\n", "\r", "\x00"))
-        for pattern in patterns
-    ):
-        raise ToolError("Use uma lista não vazia de globs relativos e sem travessia de diretórios")
-    return patterns
-
-
-def project_config(root):
-    path = Path(root) / ".my-tools.json"
-    if path.is_symlink():
-        raise ToolError("Configuração do projeto precisa ser arquivo próprio")
-    value = read_json(path)
-    if set(value) != {"schema_version", "capabilities"}:
-        raise ToolError("Configuração contém campos desconhecidos; não coloque credenciais aqui")
-    capabilities = value.get("capabilities")
-    if not isinstance(capabilities, dict) or set(capabilities) - {"search"}:
-        raise ToolError("Capacidades inválidas")
-    for entry in capabilities.values():
-        if not isinstance(entry, dict) or entry.get("provider") != "siftr":
-            raise ToolError("Provider inválido")
-        required = {"provider", "version", "enabled", "allow_remote_data"}
-        if not required <= set(entry) or set(entry) - required - {"globs"}:
-            raise ToolError("Configuração da capacidade contém campos desconhecidos")
-        if "globs" in entry:
-            validate_globs(entry["globs"])
-        if type(entry.get("enabled")) is not bool or type(entry.get("allow_remote_data")) is not bool:
-            raise ToolError("enabled e allow_remote_data precisam ser booleanos")
-        version = entry.get("version")
-        if version != "approved" and (not isinstance(version, str) or not SHA.fullmatch(version)):
-            raise ToolError("Versão do projeto inválida")
-    return value
 
 
 def setup(root=ROOT, bin_dir=None, apply=False):

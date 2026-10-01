@@ -5,11 +5,13 @@
       "repository": "https://github.com/Bentlybro/siftr.git",
       "branch": "main",
       "approved_commit": "4984c23dd338596a2ec62d836f742d98e7bb4722",
-      "adapter": "siftr-v1",
-      "capability": "search",
       "status": "experimental",
       "license": "MIT",
-      "credential_environment": ["OPENROUTER_API_KEY", "TYPESAFE_API_KEY"]
+      "credential_environment": [
+        "OPENROUTER_API_KEY",
+        "TYPESAFE_API_KEY"
+      ],
+      "installer": "siftr-source-v1"
     }
   }
 }

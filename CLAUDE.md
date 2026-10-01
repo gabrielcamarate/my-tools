@@ -4,10 +4,10 @@ Repositório público de programas reutilizáveis e protocolos de avaliação.
 
 - Leia README.md e docs/architecture.md antes de alterar contratos.
 - Python 3.11+, biblioteca padrão no controlador. Linux é o alvo validado.
-- Não copie ferramentas upstream: registre origem, licença, SHA e adaptador.
+- Não copie ferramentas upstream: registre origem, licença, SHA e instalador oficial.
 - Mudanças em instalação/atualização exigem testes de falha e recuperação.
 - Execute python3 -m unittest discover -s tests -v e python3 scripts/check_public.py.
-- Preserve versões ativas, pins de projetos e arquivos de terceiros.
+- Preserve versões ativas aceitas e arquivos de terceiros.
 - Mantenha AGENTS.md e CLAUDE.md iguais.
 - Não publique credenciais, configurações pessoais, código/logs privados ou resultados de clientes.
 - Fixtures e exemplos devem ser públicos ou sintéticos. Resultados reais pertencem ao projeto/registro autorizado.
