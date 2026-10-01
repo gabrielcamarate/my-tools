@@ -12,6 +12,17 @@
         "TYPESAFE_API_KEY"
       ],
       "installer": "siftr-source-v1"
+    },
+    "jev-pruner": {
+      "repository": "https://github.com/tamaratran/jev-pruner.git",
+      "branch": "main",
+      "approved_commit": "edbc60262a5edc07e18d646c1a3f8a9f0ae868c5",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "TYPESAFE_API_KEY"
+      ],
+      "installer": "jev-pruner-source-v1"
     }
   }
 }

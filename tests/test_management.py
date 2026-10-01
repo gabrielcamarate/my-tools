@@ -60,6 +60,7 @@ class Offline(unittest.TestCase):
         self.first = self.commit("initial")
         self.git("branch", "-M", "main")
         self.manager = Manager(home=self.base / "storage")
+        self.manager.tools = {"siftr": self.manager.tools["siftr"]}
         # Local fixture transport is injected only in tests, not accepted by catalog validation.
         self.manager.tools["siftr"]["repository"] = str(self.repository)
         self.manager.tools["siftr"]["approved_commit"] = self.first

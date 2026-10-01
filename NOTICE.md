@@ -13,3 +13,5 @@ A interface do agente é a CLI/MCP oficial gerada pelo uv, sem alteração da fo
 
 TypeSafe/Jev e OpenRouter são provedores externos. Este repositório não redistribui
 modelos e não contém credenciais, resultados privados ou garantia de benefício.
+
+Jev Pruner é de [tamaratran](https://github.com/tamaratran/jev-pruner), MIT. Revisão integrada `edbc60262a5edc07e18d646c1a3f8a9f0ae868c5`. Fonte, licença, plugin, skill e wrapper permanecem upstream no armazenamento local. My-tools compila e gerencia as revisões, sem redistribuir cópia do engine neste repositório.

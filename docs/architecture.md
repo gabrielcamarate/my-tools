@@ -5,11 +5,13 @@ my-tools: catálogo/SHA → fonte verificada → uv tool install → entrypoint 
 cliente MCP → siftr mcp → handlers oficiais → provedor → resultado ao agente
 ```
 
-O gestor não participa das chamadas do agente. Não há proxy, cadastro de chave próprio, perfis ou configuração por projeto. O catálogo registra origem, licença, SHA aceito e instalador. O my-skills orienta a escolha das ferramentas oficiais.
+O gestor não participa das chamadas do agente. Não há proxy, cadastro de chave próprio, perfis ou configuração por projeto. O catálogo registra origem, licença, SHA aceito e instalador. O my-skills orienta a escolha das ferramentas oficiais; plugins podem fornecer suas próprias skills upstream.
 
 `state.json` registra versões aceitas, ativa e anterior. `tools/<nome>/<sha>/` contém fonte Git verificada, hashes e um Python isolado usado somente para checagens offline. Não há runner nem alteração do carregamento de credenciais upstream. `native/<nome>/<sha>/` contém a instalação oficial gerada pelo uv.
 
 `native.json` registra comando estável e SHA instalado. Atualização/rollback de ferramenta integrada verifica o contrato MCP antes de trocar o symlink. Processos existentes precisam reconectar. Persistência usa replace atômico e lock POSIX; restauração entre arquivos é compensatória. `doctor` detecta divergência; `integrate --apply` reconcilia a revisão aceita.
+
+`plugins.json` registra a fonte aceita do plugin Codex. Para Jev Pruner, a fonte é compilada com npm e vinculada em `plugins/jev-pruner`. A integração registra o marketplace local e o plugin oficial; o cache é reinstalado a cada troca de SHA. O gestor confere o cache e restaura a versão anterior em falhas recuperáveis. Não registra MCP ou inventa chamadas para o Pruner.
 
 ## Acrescentar uma ferramenta
 

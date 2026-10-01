@@ -10,3 +10,5 @@ local-results/
 dist/
 build/
 *.egg-info/
+
+.jev-pruner/

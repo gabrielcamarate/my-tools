@@ -35,3 +35,7 @@ Depois de `integrate siftr --apply`, update/rollback também prepara e verifica 
 O MCP usa a versão do executável registrado no cliente. Compatibilidade offline não comprova qualidade do pacote.
 
 O estado principal, registro nativo e symlink são arquivos distintos. A restauração após falha de persistência é compensatória: falhas múltiplas/quedas podem deixar divergência. `my-tools doctor` identifica divergência e retorna falha; `my-tools integrate siftr --apply` reconcilia com a versão aceita no estado principal. Isso não instala candidato pendente nem apaga runtimes de recuperação.
+
+## Plugins oficiais
+
+Jev Pruner integrado acompanha update/rollback. Como Codex canoniza a fonte local e mantém cache próprio, é necessário remover apenas o plugin/marketplace gerenciado, registrar a nova fonte e reinstalar seu cache. O gestor executa essas operações oficiais e confere os arquivos. Instalações externas/desabilitadas são preservadas. Reconciliação usa integrate --apply; falhas múltiplas podem exigir correção do cliente. Processos já iniciados e confiança de hooks precisam ser revalidados.

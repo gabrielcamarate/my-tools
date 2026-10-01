@@ -21,7 +21,7 @@ def parser():
     sub = commands.add_parser("install")
     sub.add_argument("tool")
     sub = commands.add_parser("integrate")
-    sub.add_argument("tool", choices=["siftr"])
+    sub.add_argument("tool", choices=["siftr", "jev-pruner"])
     sub.add_argument("--apply", action="store_true")
     sub.add_argument("--bin-dir", type=Path)
     for name in ("outdated", "update"):
@@ -56,7 +56,10 @@ def main(argv=None):
             return 0
         manager = Manager()
         if args.command == "integrate":
-            from .native import integrate
+            if args.tool == "jev-pruner":
+                from .plugins import integrate
+            else:
+                from .native import integrate
             with manager.lock():
                 emit(integrate(manager, args.tool, args.apply, args.bin_dir))
             return 0
