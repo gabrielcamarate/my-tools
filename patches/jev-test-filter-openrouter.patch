@@ -1,0 +1,203 @@
+diff --git a/skills/jev-test-filter/SKILL.md b/skills/jev-test-filter/SKILL.md
+index 0d6bda0..9e9e2d0 100644
+--- a/skills/jev-test-filter/SKILL.md
++++ b/skills/jev-test-filter/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: jev-test-filter
+-description: "Use when a test suite is too slow to run whole on every change and you want to run only the tests a diff can plausibly break, when reviewing updated text snapshots, wiring test selection into CI or a pre-push hook, or composing a `jev-test-filter` command for vitest, jest, node:test, bun:test, Playwright, `cargo test` or `go test`. Triggers: `jev-test-filter`, `--verify-snapshots`, `.jev-test-filter/last.json`, `TYPESAFE_API_KEY`, `--test-name-pattern`, `-t '^(?:...)$'`, `--exact`, `go test -run`, and questions like 'only run the tests affected by this change', 'why did my -t pattern match nothing', 'which tests does this PR need'. Read it BEFORE hand-writing a runner filter argument from a selection: the full-name spelling differs per runner and a wrong one fails silently."
++description: "Use when a test suite is too slow to run whole on every change and you want to run only the tests a diff can plausibly break, when reviewing updated text snapshots, wiring test selection into CI or a pre-push hook, or composing a `jev-test-filter` command for vitest, jest, node:test, bun:test, Playwright, `cargo test` or `go test`. Triggers: `jev-test-filter`, `--verify-snapshots`, `.jev-test-filter/last.json`, `OPENROUTER_API_KEY`, `--test-name-pattern`, `-t '^(?:...)$'`, `--exact`, `go test -run`, and questions like 'only run the tests affected by this change', 'why did my -t pattern match nothing', 'which tests does this PR need'. Read it BEFORE hand-writing a runner filter argument from a selection: the full-name spelling differs per runner and a wrong one fails silently."
+ ---
+ 
+ # jev-test-filter
+@@ -16,9 +16,9 @@ to send whole — falls back to running everything and says why on stderr.
+ 
+ ## Getting it
+ 
+-The skill is not the command. `npx jev-test-filter` runs it without installing;
+-`pnpm add -D jev-test-filter` puts it in the project. It needs Node 24 or newer,
+-`git`, and `TYPESAFE_API_KEY` in the environment; `--format rust` and
++The skill is not the command. My Tools installs the accepted upstream source with a provider-only patch.
++Use its managed `jev-test-filter` command; an unpatched npm install uses TypeSafe. It needs Node 24 or newer,
++`git`, and `OPENROUTER_API_KEY` in the environment; `--format rust` and
+ `--format go` also need `cargo` and `go` on the `PATH`.
+ 
+ Check for the key before recommending the tool. Without one it does not fail —
+@@ -150,3 +150,12 @@ notice the saving, and the latency may exceed it.
+   runner was probed.
+ - `references/ci.md` — GitHub Actions wiring, and what to do about the
+   non-determinism.
++
++## My Tools provider
++
++Uses OpenRouter Decisions API (`typesafe/jev-1.13`) with the same typed score
++contract. Reads `OPENROUTER_API_KEY` from the task environment, or the existing
++private personal Siftr credential when absent. An explicit empty value disables
++that fallback. No session hook or transcript is required. The diff and extracted
++test definitions go to the provider: use only data authorized for that processing.
++The original selection engine, thresholds, fallback and runner argv are unchanged.
+diff --git a/src/cli.ts b/src/cli.ts
+index fb610fc..009c9a9 100644
+--- a/src/cli.ts
++++ b/src/cli.ts
+@@ -310,7 +310,7 @@ arguments are quoted, and the shell word-splits them without re-parsing the
+ quotes. Use --exec instead of working around it.
+ 
+ Environment:
+-  TYPESAFE_API_KEY    required unless --dry-run or --replay
++  OPENROUTER_API_KEY    required unless --dry-run or --replay
+ `;
+ 
+ async function main(): Promise<number> {
+diff --git a/src/jev.ts b/src/jev.ts
+index 3929572..069768b 100644
+--- a/src/jev.ts
++++ b/src/jev.ts
+@@ -19,6 +19,7 @@
+  * the question set, which keeps the estimator below free to be
+  * approximate.
+  */
++import { openRouterKey } from "./provider.ts";
+ import type { ScoreQuestion } from "./questions.ts";
+ 
+ export type Question = ScoreQuestion;
+@@ -53,19 +54,12 @@ export function estimateTokens(body: unknown): number {
+   return Math.ceil(JSON.stringify(body).length / 3.6);
+ }
+ 
+-export const DEFAULT_BASE_URL = "https://api.typesafe.ai";
+-export const DEFAULT_MODEL = "jev-latest";
++export const DEFAULT_BASE_URL = "https://openrouter.ai/api/alpha";
++export const DEFAULT_MODEL = "typesafe/jev-1.13";
+ 
+-/**
+- * Where the key and the endpoint come from, in order.
+- *
+- * `TYPESAFE_*` first because that is the prevailing spelling; `TYPESAFEAI_*`
+- * stays as a fallback so an existing environment keeps working without an edit.
+- * Both are read rather than one aliased to the other, so a shell that has only
+- * the older name set is not a configuration error.
+- */
+-export const API_KEY_VARS = ["TYPESAFE_API_KEY", "TYPESAFEAI_API_KEY"] as const;
+-export const BASE_URL_VARS = ["TYPESAFE_BASE_URL", "TYPESAFEAI_BASE_URL"] as const;
++// My Tools provider adaptation; decision engine and thresholds stay upstream.
++export const API_KEY_VARS = ["OPENROUTER_API_KEY"] as const;
++export const BASE_URL_VARS = ["OPENROUTER_BASE_URL"] as const;
+ 
+ /** First of these variables that is set and non-empty. */
+ export function fromEnv(names: readonly string[], env = process.env): string | null {
+@@ -290,7 +284,7 @@ export class Jev implements AskClient {
+     rateLimitWaitMs = DEFAULT_RATE_LIMIT_WAIT_MS,
+     fetch: transport = globalThis.fetch,
+   }: JevOptions = {}) {
+-    this.apiKey = apiKey ?? fromEnv(API_KEY_VARS) ?? "";
++    this.apiKey = apiKey ?? openRouterKey() ?? "";
+     this.baseUrl = (baseUrl ?? fromEnv(BASE_URL_VARS) ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+     this.model = model ?? process.env.JEV_TEST_FILTER_MODEL ?? DEFAULT_MODEL;
+     this.retries = retries;
+@@ -377,7 +371,7 @@ export class Jev implements AskClient {
+       const timer = setTimeout(() => ac.abort(), this.timeoutMs);
+       let res;
+       try {
+-        res = await this.transport(`${this.baseUrl}/v1/systemone`, {
++        res = await this.transport(`${this.baseUrl}/decisions`, {
+           method: "POST",
+           headers: {
+             authorization: `Bearer ${this.apiKey}`,
+diff --git a/src/provider.ts b/src/provider.ts
+new file mode 100644
+index 0000000..8cf6793
+--- /dev/null
++++ b/src/provider.ts
+@@ -0,0 +1,21 @@
++// Provider-only integration; never inspect a project .env.
++import { readFileSync, statSync } from "node:fs";
++import { homedir } from "node:os";
++import { join } from "node:path";
++
++export function openRouterKey(env: NodeJS.ProcessEnv = process.env, home = homedir()): string | undefined {
++  if (env.OPENROUTER_API_KEY !== undefined) return env.OPENROUTER_API_KEY.trim() || undefined;
++  try {
++    const path = join(home, ".config", "siftr", ".env");
++    const info = statSync(path);
++    if (!info.isFile() || (info.mode & 0o077) !== 0) return undefined;
++    for (const line of readFileSync(path, "utf8").split("\n")) {
++      const match = /^\s*(?:export\s+)?OPENROUTER_API_KEY\s*=\s*(.*?)\s*$/.exec(line);
++      if (!match) continue;
++      const value = match[1]!;
++      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) return value.slice(1, -1) || undefined;
++      return value.split(/\s+#/)[0]!.trim() || undefined;
++    }
++  } catch { /* Missing credential keeps the upstream full-suite fallback. */ }
++  return undefined;
++}
+diff --git a/test/cli.test.ts b/test/cli.test.ts
+index a2b3561..b4019e8 100644
+--- a/test/cli.test.ts
++++ b/test/cli.test.ts
+@@ -192,7 +192,7 @@ test("a context of another version exits 2 before anything is asked", async () =
+     execFileSync("git", ["-c", "user.name=Eval", "-c", "user.email=eval@example.com", "commit", "-q", "--allow-empty", "-m", "initial"], { cwd, env: gitEnv() });
+     writeFileSync(join(cwd, "context.json"), JSON.stringify({ version: 2, digest: "sha256:x" }));
+     const cli = new URL("../src/cli.ts", import.meta.url).pathname;
+-    const res = spawnSync(process.execPath, [cli, "--context", "context.json", "--json"], { cwd, encoding: "utf8", env: { ...process.env, TYPESAFE_API_KEY: "" } });
++    const res = spawnSync(process.execPath, [cli, "--context", "context.json", "--json"], { cwd, encoding: "utf8", env: { ...process.env, OPENROUTER_API_KEY: "" } });
+     assert.equal(res.status, 2, res.stderr);
+     assert.match(res.stderr, /unsupported context version 2; expected 1/);
+     assert.equal(res.stdout, "");
+diff --git a/test/jev.test.ts b/test/jev.test.ts
+index 33b5ef2..cda4184 100644
+--- a/test/jev.test.ts
++++ b/test/jev.test.ts
+@@ -6,7 +6,7 @@ function ok(body: unknown): Response {
+   return new Response(JSON.stringify(body), { status: 200 });
+ }
+ 
+-test("ask posts one state and many questions to /v1/systemone", async () => {
++test("ask posts one state and many questions to /decisions", async () => {
+   const seen: Array<{ url: string; body: unknown }> = [];
+   const jev = new Jev({
+     apiKey: "k",
+@@ -17,7 +17,7 @@ test("ask posts one state and many questions to /v1/systemone", async () => {
+     },
+   });
+   const res = await jev.ask({ diff: "x" }, { q0000: { type: "score", instructions: {}, criteria: ["a"] } });
+-  assert.match(seen[0]!.url, /\/v1\/systemone$/);
++  assert.match(seen[0]!.url, /\/decisions$/);
+   assert.deepEqual((seen[0]!.body as Record<string, unknown>).state, { diff: "x" });
+   assert.deepEqual(res.answers, { q0000: { score: 2, confidence: 0.8 } });
+   assert.equal(jev.spent.inputTokens, 10);
+@@ -72,7 +72,7 @@ test("a missing key fails before any request", async () => {
+   const jev = new Jev({ apiKey: "", fetch: async () => { throw new Error("should not be called"); } });
+   await assert.rejects(
+     () => jev.ask({}, { q0: { type: "score", instructions: {}, criteria: ["a"] } }),
+-    /TYPESAFE_API_KEY/,
++    /OPENROUTER_API_KEY/,
+   );
+ });
+ 
+diff --git a/test/openrouter-provider.test.ts b/test/openrouter-provider.test.ts
+new file mode 100644
+index 0000000..c9e7516
+--- /dev/null
++++ b/test/openrouter-provider.test.ts
+@@ -0,0 +1,20 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { mkdtempSync, mkdirSync, writeFileSync, chmodSync, rmSync } from "node:fs";
++import { join } from "node:path";
++import { tmpdir } from "node:os";
++import { openRouterKey } from "../src/provider.ts";
++
++test("environment precedence, shared private file, empty disable and unsafe file rejection", () => {
++  const home = mkdtempSync(join(tmpdir(), "jev-provider-test-"));
++  try {
++    mkdirSync(join(home, ".config", "siftr"), { recursive: true });
++    const path = join(home, ".config", "siftr", ".env");
++    writeFileSync(path, "OPENROUTER_API_KEY='synthetic-private'\n", { mode: 0o600 });
++    assert.equal(openRouterKey({}, home), "synthetic-private");
++    assert.equal(openRouterKey({ OPENROUTER_API_KEY: "synthetic-env" }, home), "synthetic-env");
++    assert.equal(openRouterKey({ OPENROUTER_API_KEY: "" }, home), undefined);
++    chmodSync(path, 0o644);
++    assert.equal(openRouterKey({}, home), undefined);
++  } finally { rmSync(home, { recursive: true }); }
++});

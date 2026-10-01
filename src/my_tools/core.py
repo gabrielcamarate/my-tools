@@ -70,7 +70,7 @@ def catalog(root=ROOT):
             raise ToolError("Commit aprovado precisa ser SHA completo")
         if not re.fullmatch(r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\.git", spec.get("repository", "")):
             raise ToolError("Origem precisa ser repositório GitHub HTTPS sem credenciais")
-        if spec.get("installer") not in {"siftr-source-v1", "jev-pruner-source-v1"}:
+        if spec.get("installer") not in {"siftr-source-v1", "jev-pruner-source-v1", "jev-test-filter-source-v1"}:
             raise ToolError("Instalador ainda não suportado")
         if not re.fullmatch(r"[A-Za-z0-9_./-]+", spec.get("branch", "")) or ".." in spec["branch"]:
             raise ToolError("Branch inválida")
@@ -167,15 +167,18 @@ class Manager:
             "catalog_commit": self.spec(name)["approved_commit"] if from_catalog else old.get("catalog_commit")}
         from .native import synchronize
         from .plugins import synchronize as synchronize_plugin
+        from .commands import synchronize as synchronize_command
         # Prepare/check the official entrypoint before publishing the new SHA.
         synchronize(self, name, commit)
         try:
             synchronize_plugin(self, name, commit)
+            synchronize_command(self, name, commit)
             self.save(state)
         except BaseException:
             if old.get("active"):
                 synchronize(self, name, old["active"])
                 synchronize_plugin(self, name, old["active"])
+                synchronize_command(self, name, old["active"])
             raise
 
     def install(self, name):
@@ -283,6 +286,8 @@ class Manager:
                     row["mcp_tools"] = sorted(native.MCP_TOOLS)
                 from .plugins import diagnose
                 row.update(diagnose(self, name, entry["active"]))
+                from .commands import diagnose as diagnose_command
+                row.update(diagnose_command(self, name, entry["active"]))
                 row["status"] = "ready_offline"
             except ToolError as exc:
                 row.update(status="not_ready", reason=str(exc))

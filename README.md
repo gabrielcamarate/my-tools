@@ -12,6 +12,7 @@ O controlador usa Python 3.11+ e biblioteca padrão; Linux é o alvo validado. R
 |---|---|---|
 | [Siftr](https://github.com/Bentlybro/siftr) | CLI `siftr` e MCP oficial `siftr mcp` | Experimental; quatro ferramentas disponíveis |
 | [Jev Pruner](https://github.com/tamaratran/jev-pruner) | Plugin/skill oficial Codex e wrapper upstream | Experimental: OpenRouter, engine upstream preservado e poda live verificada |
+| [Jev Test Filter](https://github.com/mizchi/jev-test-filter) | CLI `jev-test-filter` e skill upstream | Experimental: seleção live via OpenRouter, preservando gates finais |
 
 O MCP oferece `semantic_search`, `focused_read`, `pick_relevant` e `filter_output` (experimental). Fonte upstream intacta; não há proxy ou tradução dos nomes/parâmetros.
 
@@ -62,6 +63,23 @@ A skill `jev-pruner` chama `node <plugin-root>/dist/codex/run.js -- <comando>`. 
 O provedor recebe histórico e stdout: autorização deve abranger ambos. O filtro do comando atual não saneia mensagens anteriores. Testes live usam sessão sintética dedicada. Não use para conteúdo sensível, dados estruturados, leitura integral, diffs, servidores ou TTY. Não aplique também Siftr `filter_output` ao mesmo resultado.
 
 Uma fixture local foi reduzida de 22.710 para 2.930 tokens estimados, com diagnósticos e original preservados. Não é percentual de economia da tarefa inteira. O agente em uma sessão CLI nova também chamou o wrapper e recebeu poda real. Desktop precisa recarregar e confiar no hook; Cloud precisa instalar/configurar no próprio ambiente e disponibilizar histórico compatível. Veja [uso, evidência e requisitos Cloud](docs/jev-pruner.md).
+
+## Jev Test Filter com OpenRouter
+
+Node.js 24+, pnpm e Git são necessários. A integração instala a CLI e a skill completas do upstream, na revisão aceita, com um patch exclusivo de provedor. Usa a mesma chave OpenRouter do processo ou configuração pessoal privada do Siftr.
+
+```bash
+my-tools install jev-test-filter
+my-tools integrate jev-test-filter --apply
+# No projeto, para mudanças locais rastreadas contra HEAD:
+jev-test-filter --format node --exec -- node --test
+# Para uma base Git confirmada, adapte ao runner do projeto:
+jev-test-filter --base origin/main --exec -- vitest run
+```
+
+A skill `jev-test-filter` orienta os argumentos originais. Três skills do my-skills remetem a ela em implementação, iteração e planejamento de verificação. A ferramenta seleciona testes pelo diff, não poda logs. Use quando a suíte é lenta e preserve todos os gates finais. Em uma fixture sintética, selecionou 3/20 testes e reteve as três regressões esperadas. A execução lenta simulada caiu de 2,13 s para 0,95 s; a rápida aumentou de 0,16 s para 0,85 s. Não é economia de tokens Codex medida.
+
+`integrate` publica o executável compilado por symlink em `~/.local/bin/jev-test-filter` e a skill com referências em `~/.agents/skills/jev-test-filter`. Updates e rollback acompanham ambos, preservando instalações externas. Não requer MCP, hook nem histórico de sessão. Cloud precisa preparar esses links, runtime, credencial durante a tarefa e rede no próprio ambiente. Veja [uso, validação e Cloud](docs/jev-test-filter.md).
 
 ## Uso nativo
 

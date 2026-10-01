@@ -29,3 +29,9 @@ Não crie aliases de operações. O catálogo inclui somente ferramentas integra
 Instalação e inferência exigem rede; inferência exige credencial oficial. Venv e checagens offline não são sandbox de segurança contra código hostil. Hashes detectam mudanças acidentais; não protegem de um invasor que controla a conta e os registros. Versões oficiais anteriores são mantidas para rollback. Aceitação técnica não comprova qualidade de decisões nem economia de tokens.
 
 Para Pruner, repair recompila o mesmo SHA em staging e restaura fonte/cache em falha recuperável. Atualização verifica aplicação do patch antes da troca; não tenta traduzir protocolos ou resolver conflitos automaticamente. A configuração OpenRouter preserva a API de decisões tipadas e o motor original.
+
+## CLIs com skills upstream
+
+`commands.json` registra os destinos e SHA da CLI/skill do Jev Test Filter. A fonte é instalada com `pnpm install --frozen-lockfile --ignore-scripts`, compilada e verificada; o patch de OpenRouter só muda transporte, carregamento da credencial e orientação do provedor. `commands.py` publica o arquivo upstream `dist/cli.js` diretamente e a pasta completa da skill. Não há wrapper de seleção criado pelo gestor.
+
+Atualização/rollback verificam o candidato antes de trocar os dois links. Preflight protege destinos externos; falhas de troca/persistência restauram os links anteriores. `doctor` confere hashes de fonte/compilação e os destinos, além dos testes offline upstream. Não constitui sandbox nem comprova integridade de todo runtime/dependência instalada.

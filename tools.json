@@ -23,6 +23,17 @@
         "OPENROUTER_API_KEY"
       ],
       "installer": "jev-pruner-source-v1"
+    },
+    "jev-test-filter": {
+      "repository": "https://github.com/mizchi/jev-test-filter.git",
+      "branch": "main",
+      "approved_commit": "955bdf4e20ff49c3dac0b5b3eee5df0278d5be87",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "jev-test-filter-source-v1"
     }
   }
 }
