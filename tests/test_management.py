@@ -13,6 +13,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from my_tools.core import Manager, ToolError, ROOT, atomic_json, checked, project_config, project_root, setup, uninstall_launcher
 from my_tools import cli
+from my_tools import __version__
 from my_tools.siftr import command
 
 
@@ -203,7 +204,7 @@ class Offline(unittest.TestCase):
         setup(bin_dir=folder, apply=True)
         result = subprocess.run([sys.executable, str(target), "--version"], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.strip(), "0.1.0")
+        self.assertEqual(result.stdout.strip(), __version__)
         uninstall_launcher(bin_dir=folder, apply=True)
         self.assertFalse(target.exists())
 
