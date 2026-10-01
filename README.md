@@ -11,7 +11,7 @@ O controlador usa Python 3.11+ e biblioteca padrão; Linux é o alvo validado. R
 | Ferramenta | Interface do agente | Estado |
 |---|---|---|
 | [Siftr](https://github.com/Bentlybro/siftr) | CLI `siftr` e MCP oficial `siftr mcp` | Experimental; quatro ferramentas disponíveis |
-| [Jev Pruner](https://github.com/tamaratran/jev-pruner) | Plugin/skill oficial Codex e wrapper upstream | Experimental; exige chave TypeSafe e confiança no hook |
+| [Jev Pruner](https://github.com/tamaratran/jev-pruner) | Plugin/skill oficial Codex e wrapper upstream | Pendente: wrapper não suporta OpenRouter; desabilitado no consumidor |
 
 O MCP oferece `semantic_search`, `focused_read`, `pick_relevant` e `filter_output` (experimental). Fonte upstream intacta; não há proxy ou tradução dos nomes/parâmetros.
 
@@ -44,7 +44,10 @@ args = ["mcp"]
 
 Use o caminho estável, não um caminho contendo o SHA. Caso o cliente exija confirmação, configure as ferramentas individualmente conforme a autorização do consumidor; o Codex suporta `mcp_servers.siftr.tools.<nome>.approval_mode`. Não libere ferramentas adicionais por padrão. Skills de descoberta podem orientar a escolha das ferramentas; instalação não garante seleção automática em todo pedido.
 
-## Instalar Jev Pruner no Codex
+## Jev Pruner: compatibilidade pendente
+
+O consumidor definiu OpenRouter como provedor único. A revisão aceita do Pruner usa diretamente a API TypeSafe, não aceita `OPENROUTER_API_KEY` pelo wrapper e tem formato de requisição diferente. Está desabilitado nesse workflow. Os comandos abaixo documentam a interface upstream para referência, não são instrução para ativá-lo com uma chave OpenRouter. Não renomeie a credencial nem crie proxy para fingir compatibilidade oficial.
+
 
 Node.js 18+, npm e Codex CLI com `plugin` são necessários. Validação local: Codex 0.159.2.
 

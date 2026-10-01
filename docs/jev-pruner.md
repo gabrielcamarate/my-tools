@@ -1,6 +1,6 @@
 # Jev Pruner
 
-Origem: https://github.com/tamaratran/jev-pruner. MIT, revisão aceita `edbc60262a5edc07e18d646c1a3f8a9f0ae868c5`, plugin upstream 0.1.0. Integração experimental, oficial e sem patch; não é um MCP.
+Origem: https://github.com/tamaratran/jev-pruner. MIT, revisão aceita `edbc60262a5edc07e18d646c1a3f8a9f0ae868c5`, plugin upstream 0.1.0. Instalação técnica oficial e sem patch; não é um MCP. Adoção pendente e plugin desabilitado: o consumidor exige OpenRouter e o wrapper desta revisão usa a API TypeSafe diretamente. Não há compatibilidade oficial verificada.
 
 ## Ciclo gerenciado
 

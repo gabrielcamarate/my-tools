@@ -17,7 +17,7 @@
       "repository": "https://github.com/tamaratran/jev-pruner.git",
       "branch": "main",
       "approved_commit": "edbc60262a5edc07e18d646c1a3f8a9f0ae868c5",
-      "status": "experimental",
+      "status": "pending_openrouter_support",
       "license": "MIT",
       "credential_environment": [
         "TYPESAFE_API_KEY"
