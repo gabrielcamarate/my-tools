@@ -2,10 +2,29 @@
 import hashlib
 import json
 import os
+import shutil
+import uuid
 from pathlib import Path
 import tempfile
 
-from .core import ToolError, atomic_json, checked, read_json
+from .core import ROOT, ToolError, atomic_json, checked, read_json
+
+PATCH = ROOT / "patches/jev-pruner-openrouter.patch"
+
+
+def provider_hash():
+    return hashlib.sha256(PATCH.read_bytes()).hexdigest()
+
+
+def apply_provider(source):
+    paths = {line.split("\t")[-1] for line in checked(
+        ["git", "apply", "--numstat", str(PATCH)]).splitlines()}
+    if paths != {"src/codex/run.ts", "src/codex/prune.ts", "src/codex/provider.ts",
+                 "codex/skills/jev-pruner/SKILL.md", "tests/codex.test.ts",
+                 "tests/codex-boundaries.test.ts", "tests/openrouter-provider.test.ts"}:
+        raise ToolError("Patch excede o escopo de provedor revisado")
+    checked(["git", "-C", str(source), "apply", "--check", str(PATCH)])
+    checked(["git", "-C", str(source), "apply", str(PATCH)])
 
 
 def build_env():
@@ -18,6 +37,8 @@ def hashes(path):
     source = Path(path) / "source"
     tracked = checked(["git", "-C", str(source), "ls-files", "-z"]).split("\0")
     files = [source / p for p in tracked if p]
+    files += [source / p for p in ("src/codex/provider.ts", "tests/openrouter-provider.test.ts")
+              if p not in tracked]
     files += sorted((source / "dist").rglob("*"))
     return {str(p.relative_to(source)): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in files if p.is_file()}
@@ -63,14 +84,17 @@ def prepare(path, spec, commit):
     if package.get("scripts", {}).get("build") != "tsc" or package.get("dependencies", {}):
         raise ToolError("Contrato de compilação mudou; revisão necessária")
     env = build_env()
+    # Conflicting upstream changes stop installation before activation.
+    apply_provider(source)
     checked(["npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"], cwd=source, env=env)
     checked(["npm", "run", "build"], cwd=source, env=env)
     contract(source)
     atomic_json(Path(path) / "installation.json", {"schema_version": 1, "commit": commit,
-        "repository": spec["repository"], "installer": spec["installer"], "hashes": hashes(path)})
+        "repository": spec["repository"], "installer": spec["installer"],
+        "provider_patch_sha256": provider_hash(), "hashes": hashes(path)})
 
 
-def check(path, spec, commit, smoke=True):
+def check(path, spec, commit, smoke=True, verify_provider=True):
     path = Path(path)
     record = read_json(path / "installation.json")
     if any(record.get(k) != expected for k, expected in (
@@ -78,6 +102,8 @@ def check(path, spec, commit, smoke=True):
         raise ToolError("Plugin não corresponde à origem/versão/instalador")
     if hashes(path) != record.get("hashes"):
         raise ToolError("Fonte ou compilação do plugin foi alterada")
+    if verify_provider and record.get("provider_patch_sha256") != provider_hash():
+        raise ToolError("Ajuste de provedor pendente; execute repair jev-pruner")
     source = path / "source"
     contract(source)
     if smoke:
@@ -92,3 +118,47 @@ def check(path, spec, commit, smoke=True):
                               'process.stdout.write("official-pruner-offline")'], cwd=folder, env=env)
             if output != "official-pruner-offline":
                 raise ToolError("Wrapper oficial não preservou a saída")
+
+
+def rebuild(manager):
+    """Repair the same upstream SHA, restoring source/cache on failure."""
+    from . import plugins
+    name = plugins.NAME
+    commit = manager.state()["tools"].get(name, {}).get("active")
+    if not commit:
+        raise ToolError("Instale o plugin antes de reparar")
+    target = manager.location(name, commit)
+    spec = manager.spec(name)
+    check(target, spec, commit, smoke=False, verify_provider=False)
+    entry = plugins.registry(manager)["tools"].get(name)
+    if entry:
+        plugins.ownership(target / "source")
+    stage = target.with_name(f".repair-{uuid.uuid4().hex}")
+    backup = target.with_name(f".previous-{uuid.uuid4().hex}")
+    stage.mkdir(mode=0o700)
+    replaced = False
+    try:
+        prepare(stage, spec, commit)
+        check(stage, spec, commit)
+        os.replace(target, backup)
+        try:
+            os.replace(stage, target)
+        except BaseException:
+            os.replace(backup, target)
+            raise
+        replaced = True
+        check(target, spec, commit, smoke=False)
+        if entry:
+            plugins.refresh(Path(entry["root"]))
+    except BaseException:
+        if replaced:
+            shutil.rmtree(target)
+            os.replace(backup, target)
+            if entry:
+                plugins.refresh(Path(entry["root"]))
+        raise
+    finally:
+        shutil.rmtree(stage, ignore_errors=True)
+    shutil.rmtree(backup)
+    return {"tool": name, "active": commit, "status": "repaired",
+            "provider_patch_sha256": provider_hash()}

@@ -15,3 +15,5 @@ TypeSafe/Jev e OpenRouter são provedores externos. Este repositório não redis
 modelos e não contém credenciais, resultados privados ou garantia de benefício.
 
 Jev Pruner é de [tamaratran](https://github.com/tamaratran/jev-pruner), MIT. Revisão integrada `edbc60262a5edc07e18d646c1a3f8a9f0ae868c5`. Fonte, licença, plugin, skill e wrapper permanecem upstream no armazenamento local. My-tools compila e gerencia as revisões, sem redistribuir cópia do engine neste repositório.
+
+O ajuste de provedor do Pruner, autorizado em 30/09/2026, é mantido em `patches/jev-pruner-openrouter.patch`: URL/modelo, leitura da chave OpenRouter, orientação da skill e testes de integração. Não é uma release upstream nem promessa de suporte do autor; o LICENSE MIT e a autoria dos trechos permanecem do upstream. O motor de poda não foi adaptado.

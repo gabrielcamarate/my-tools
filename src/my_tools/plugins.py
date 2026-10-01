@@ -155,7 +155,8 @@ def integrate(manager, name, apply=False, bin_dir=None):
             raise
     return {"tool": name, "active": commit, "plugin": PLUGIN, "root": str(link),
             "status": "integrated" if apply else "planned", "interface": "official_codex_plugin",
-            "hook_trust": "review in a new session", "credential": "TYPESAFE_API_KEY"}
+            "hook_trust": "review in a new session", "credential": "OPENROUTER_API_KEY",
+            "provider": "openrouter_decisions"}
 
 
 def synchronize(manager, name, commit):
@@ -187,6 +188,11 @@ def diagnose(manager, name, commit):
     if entry["active"] != commit or Path(entry["root"]).resolve() != source:
         raise ToolError("Estado de plugin diverge da revisão aceita; execute integrate --apply")
     info = check_client(source)
+    # Report availability without printing, copying or transmitting the credential.
+    available = checked(["node", "--input-type=module", "-e",
+        "const m=await import(process.argv[1]); process.stdout.write(String(Boolean(await m.openRouterKey())));",
+        (source / "dist/codex/provider.js").as_uri()]) == "true"
     return {"official_plugin": PLUGIN, "plugin_root": entry["root"],
             "client_enabled": info.get("enabled"), "hook_trust": "not verified",
-            "requires_session_history_export": True}
+            "requires_session_history_export": True, "provider": "openrouter_decisions",
+            "credential_available_to_wrapper": available}

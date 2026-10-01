@@ -1,0 +1,182 @@
+diff --git i/codex/skills/jev-pruner/SKILL.md w/codex/skills/jev-pruner/SKILL.md
+index a77d7c7..30fd8e8 100644
+--- i/codex/skills/jev-pruner/SKILL.md
++++ w/codex/skills/jev-pruner/SKILL.md
+@@ -28,9 +28,15 @@ unchanged, and preserves the exit code. It does not intercept other shell calls.
+ Only stdout over 10,000 estimated tokens is eligible. The trusted `PreToolUse`
+ hook records the current transcript path; the wrapper uses `CODEX_THREAD_ID` to
+ load that session's user/assistant messages and complete recorded tool results.
+-Missing history, missing `TYPESAFE_API_KEY`, blocked Jev network access, failed
++Missing history, missing `OPENROUTER_API_KEY` (or the private personal Siftr credential), blocked Jev network access, failed
+ commands, archive failures, and scoring failures return the original stdout.
+ Never claim pruning occurred without seeing an omission marker.
+ 
+ Read or search the archive path in the final footer whenever omitted output is
+ needed. Retained text is verbatim; Jev does not generate a summary.
++
++My Tools configures the Codex provider to OpenRouter Decisions API with
++`typesafe/jev-1.13`. The upstream pruning engine and typed answers are preserved.
++The wrapper sends session history and stdout to this provider. Use only when
++that history and output are authorized for external processing; secret checks
++on the current command do not sanitize earlier conversation messages.
+diff --git i/src/codex/provider.ts w/src/codex/provider.ts
+new file mode 100644
+index 0000000..33e5306
+--- /dev/null
++++ w/src/codex/provider.ts
+@@ -0,0 +1,27 @@
++// Provider-only integration maintained by my-tools; pruning stays upstream.
++import { readFile, stat } from 'node:fs/promises';
++import { homedir } from 'node:os';
++import { join } from 'node:path';
++
++export async function openRouterKey(
++  env: NodeJS.ProcessEnv = process.env, home: string = homedir(),
++): Promise<string | undefined> {
++  // An explicit empty value disables the personal-file fallback.
++  if (env.OPENROUTER_API_KEY !== undefined) return env.OPENROUTER_API_KEY || undefined;
++  try {
++    // Reuse Siftr's existing private credential; never read a project's .env.
++    const path = join(home, '.config', 'siftr', '.env');
++    const info = await stat(path);
++    if (!info.isFile() || (info.mode & 0o077) !== 0) return undefined;
++    const text = await readFile(path, 'utf8');
++    for (const line of text.split('\n')) {
++      const match = /^\s*(?:export\s+)?OPENROUTER_API_KEY\s*=\s*(.*?)\s*$/.exec(line);
++      if (!match) continue;
++      const value = match[1];
++      if (value.startsWith('"') && value.endsWith('"')) return value.slice(1, -1) || undefined;
++      if (value.startsWith("'") && value.endsWith("'")) return value.slice(1, -1) || undefined;
++      return value.split(/\s+#/)[0].trim() || undefined;
++    }
++  } catch { /* No credential means upstream passthrough. */ }
++  return undefined;
++}
+diff --git i/src/codex/prune.ts w/src/codex/prune.ts
+index e036259..e1dea67 100644
+--- i/src/codex/prune.ts
++++ w/src/codex/prune.ts
+@@ -45,7 +45,8 @@ export async function pruneCodexOutput(
+           if (options.signal?.aborted) throw new Error('Command interrupted');
+           await (archived ??= archive());
+           if (options.asker) return options.asker.ask(state, questions);
+-          const request = buildJevRequest({ apiKey }, state, questions);
++          const request = buildJevRequest({ apiKey, baseUrl: 'https://openrouter.ai/api/alpha/decisions',
++            model: 'typesafe/jev-1.13' }, state, questions);
+           const controller = new AbortController();
+           const cancel = () => controller.abort();
+           options.signal?.addEventListener('abort', cancel, { once: true });
+diff --git i/src/codex/run.ts w/src/codex/run.ts
+index 9462a9f..670eff6 100644
+--- i/src/codex/run.ts
++++ w/src/codex/run.ts
+@@ -1,5 +1,6 @@
+ import { spawn } from 'node:child_process';
+ import { pruneCodexOutput } from './prune.js';
++import { openRouterKey } from './provider.js';
+ 
+ const args = process.argv.slice(2);
+ if (args[0] !== '--' || args.length < 2) {
+@@ -48,7 +49,7 @@ if (args[0] !== '--' || args.length < 2) {
+         ? await pruneCodexOutput(output, [command, ...parameters].join(' '), {
+           cwd: process.cwd(),
+           sessionId: process.env.CODEX_THREAD_ID,
+-          apiKey: process.env.TYPESAFE_API_KEY,
++          apiKey: process.env.CODEX_THREAD_ID ? await openRouterKey() : undefined,
+           signal: controller.signal,
+         })
+         : output;
+diff --git i/tests/codex-boundaries.test.ts w/tests/codex-boundaries.test.ts
+index 3c06f8e..a1d25b9 100644
+--- i/tests/codex-boundaries.test.ts
++++ w/tests/codex-boundaries.test.ts
+@@ -141,7 +141,7 @@ async function command(script: string, input = '') {
+     '--import', createRequire(import.meta.url).resolve('tsx'), resolve('src/codex/run.ts'), '--', process.execPath, '-e', script,
+   ], {
+     cwd: options.cwd,
+-    env: { ...process.env, CODEX_THREAD_ID: '', TYPESAFE_API_KEY: '', JEV_TEST_VALUE: 'preserved' },
++    env: { ...process.env, CODEX_THREAD_ID: '', OPENROUTER_API_KEY: '', JEV_TEST_VALUE: 'preserved' },
+   });
+   const buffers: Buffer[] = [];
+   const errors: Buffer[] = [];
+@@ -162,7 +162,7 @@ describe('Codex subprocess boundaries', () => {
+         process.stdout.write('before-cancellation\\n', () => process.stderr.write('child-ready'));
+         setInterval(() => {}, 1000);
+       `,
+-    ], { env: { ...process.env, CODEX_THREAD_ID: '', TYPESAFE_API_KEY: '' } });
++    ], { env: { ...process.env, CODEX_THREAD_ID: '', OPENROUTER_API_KEY: '' } });
+     const buffers: Buffer[] = [];
+     let cancelled = false;
+     child.stdout.on('data', (data: Buffer) => buffers.push(data));
+diff --git i/tests/codex.test.ts w/tests/codex.test.ts
+index 5e63d80..fa02098 100644
+--- i/tests/codex.test.ts
++++ w/tests/codex.test.ts
+@@ -171,7 +171,7 @@ describe('Codex output pruning', () => {
+ async function run(parameters: string[]) {
+   const child = spawn(process.execPath, [
+     '--import', 'tsx', resolve('src/codex/run.ts'), '--', ...parameters,
+-  ], { env: { ...process.env, CODEX_THREAD_ID: '', TYPESAFE_API_KEY: '' } });
++  ], { env: { ...process.env, CODEX_THREAD_ID: '', OPENROUTER_API_KEY: '' } });
+   const stdout: Buffer[] = [];
+   const stderr: Buffer[] = [];
+   child.stdout.on('data', (chunk: Buffer) => stdout.push(chunk));
+@@ -239,7 +239,7 @@ describe('Codex command wrapper', () => {
+     ], {
+       env: {
+         ...process.env, HOME: options.home,
+-        CODEX_THREAD_ID: sessionId, TYPESAFE_API_KEY: 'synthetic',
++        CODEX_THREAD_ID: sessionId, OPENROUTER_API_KEY: 'synthetic',
+       },
+     });
+     const buffers: Buffer[] = [];
+diff --git i/tests/openrouter-provider.test.ts w/tests/openrouter-provider.test.ts
+new file mode 100644
+index 0000000..b5bd27e
+--- /dev/null
++++ w/tests/openrouter-provider.test.ts
+@@ -0,0 +1,44 @@
++import { mkdtemp, mkdir, writeFile, rm, chmod } from 'node:fs/promises';
++import { tmpdir } from 'node:os';
++import { join } from 'node:path';
++import { afterEach, expect, it, vi } from 'vitest';
++import { openRouterKey } from '../src/codex/provider.js';
++import { saveContext } from '../src/codex/context.js';
++import { pruneCodexOutput } from '../src/codex/prune.js';
++const homes: string[] = [];
++afterEach(async () => { vi.unstubAllGlobals(); await Promise.all(homes.splice(0).map(h => rm(h, { recursive: true, force: true }))); });
++async function home() { const h = await mkdtemp(join(tmpdir(), 'pruner-provider-')); homes.push(h); return h; }
++it('environment wins, explicit empty disables fallback, absent file fails open', async () => {
++  const h = await home();
++  expect(await openRouterKey({ OPENROUTER_API_KEY: 'synthetic-env' }, h)).toBe('synthetic-env');
++  expect(await openRouterKey({}, h)).toBeUndefined();
++  await mkdir(join(h, '.config/siftr'), { recursive: true });
++  await writeFile(join(h, '.config/siftr/.env'), "OPENROUTER_API_KEY='synthetic-file'\n", { mode: 0o600 });
++  expect(await openRouterKey({}, h)).toBe('synthetic-file');
++  expect(await openRouterKey({ OPENROUTER_API_KEY: '' }, h)).toBeUndefined();
++  await chmod(join(h, '.config/siftr/.env'), 0o644);
++  expect(await openRouterKey({}, h)).toBeUndefined();
++});
++it('sends typed noul requests to OpenRouter and retains an exact archive', async () => {
++  const h = await home(), id = 'provider-fixture', path = join(h, 'rollout.jsonl');
++  await writeFile(path, [
++    { type: 'session_meta', payload: { id } },
++    { type: 'response_item', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Keep errors and deployment artifacts.' }] } },
++  ].map(e => JSON.stringify(e)).join('\n'));
++  await saveContext({ hook_event_name: 'PreToolUse', tool_name: 'Bash', session_id: id, transcript_path: path }, h);
++  const output = Buffer.from(('progress cache current '.repeat(12) + '\n').repeat(500));
++  const fetcher = vi.fn(async (url: string, init: RequestInit) => {
++    expect(url).toBe('https://openrouter.ai/api/alpha/decisions');
++    expect(init.method).toBe('POST');
++    expect(init.headers).toMatchObject({ authorization: 'Bearer synthetic' });
++    const body = JSON.parse(init.body as string);
++    expect(body.model).toBe('typesafe/jev-1.13');
++    expect(Object.keys(body).sort()).toEqual(['model', 'questions', 'state']);
++    for (const question of Object.values(body.questions) as { type: string }[]) expect(question.type).toBe('noul');
++    return new Response(JSON.stringify({ answers: Object.fromEntries(Object.keys(body.questions).map(k => [k, { type: 'noul', noul: 0 }])), usage: { input_tokens: 10 } }));
++  });
++  vi.stubGlobal('fetch', fetcher);
++  const displayed = await pruneCodexOutput(output, 'npm test', { cwd: h, home: h, sessionId: id, apiKey: 'synthetic' });
++  expect(fetcher).toHaveBeenCalled();
++  expect(displayed.length).toBeLessThan(output.length);
++});

@@ -16,3 +16,7 @@ Ausência/falha/resultado insuficiente: busca local e leitura direta. Confira ch
 O MCP oficial precisa estar conectado na sessão, receber a chave pelo setup do Siftr e acessar arquivos autorizados. Não impõe filtros ou isolamento por projeto. Skills orientam escolhas, não impõem isolamento de filesystem nem autorização de envio. Outro ambiente precisa de instalação/configuração próprias.
 
 Teste o caminho real em sessão nova, confira as chamadas e avalie a resposta. Invocação explícita de skill não comprova seleção implícita universal. Compare ganho em tarefas equivalentes; testes de disponibilidade não demonstram economia.
+
+## Jev Pruner
+
+`gabriel-github-resolution`, `gabriel-loop-engineering`, `gabriel-verification-planning` e `gabriel-release-smoke-test` remetem à skill do plugin `jev-pruner` para logs extensos autorizados. A chamada é o wrapper upstream, sem MCP ou alias de operação no My Tools. Não aplicar também filter_output sobre a mesma saída. Seleção por skill não intercepta automaticamente todas as chamadas; histórico, chave, rede e hook são necessários.

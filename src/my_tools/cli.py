@@ -20,6 +20,8 @@ def parser():
         commands.add_parser(name)
     sub = commands.add_parser("install")
     sub.add_argument("tool")
+    sub = commands.add_parser("repair")
+    sub.add_argument("tool", choices=["jev-pruner"])
     sub = commands.add_parser("integrate")
     sub.add_argument("tool", choices=["siftr", "jev-pruner"])
     sub.add_argument("--apply", action="store_true")
@@ -78,6 +80,9 @@ def main(argv=None):
                     try:
                         if args.command == "install":
                             result = manager.install(name)
+                        elif args.command == "repair":
+                            from .pruner import rebuild
+                            result = rebuild(manager)
                         elif args.command == "outdated":
                             result = manager.discover(name)
                         elif args.command == "update":

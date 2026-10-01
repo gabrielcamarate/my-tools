@@ -11,7 +11,7 @@ O controlador usa Python 3.11+ e biblioteca padrão; Linux é o alvo validado. R
 | Ferramenta | Interface do agente | Estado |
 |---|---|---|
 | [Siftr](https://github.com/Bentlybro/siftr) | CLI `siftr` e MCP oficial `siftr mcp` | Experimental; quatro ferramentas disponíveis |
-| [Jev Pruner](https://github.com/tamaratran/jev-pruner) | Plugin/skill oficial Codex e wrapper upstream | Pendente: wrapper não suporta OpenRouter; desabilitado no consumidor |
+| [Jev Pruner](https://github.com/tamaratran/jev-pruner) | Plugin/skill oficial Codex e wrapper upstream | Experimental: OpenRouter, engine upstream preservado e poda live verificada |
 
 O MCP oferece `semantic_search`, `focused_read`, `pick_relevant` e `filter_output` (experimental). Fonte upstream intacta; não há proxy ou tradução dos nomes/parâmetros.
 
@@ -44,37 +44,24 @@ args = ["mcp"]
 
 Use o caminho estável, não um caminho contendo o SHA. Caso o cliente exija confirmação, configure as ferramentas individualmente conforme a autorização do consumidor; o Codex suporta `mcp_servers.siftr.tools.<nome>.approval_mode`. Não libere ferramentas adicionais por padrão. Skills de descoberta podem orientar a escolha das ferramentas; instalação não garante seleção automática em todo pedido.
 
-## Jev Pruner: compatibilidade pendente
+## Jev Pruner com OpenRouter
 
-O consumidor definiu OpenRouter como provedor único. A revisão aceita do Pruner usa diretamente a API TypeSafe, não aceita `OPENROUTER_API_KEY` pelo wrapper e tem formato de requisição diferente. Está desabilitado nesse workflow. Os comandos abaixo documentam a interface upstream para referência, não são instrução para ativá-lo com uma chave OpenRouter. Não renomeie a credencial nem crie proxy para fingir compatibilidade oficial.
-
-
-Node.js 18+, npm e Codex CLI com `plugin` são necessários. Validação local: Codex 0.159.2.
+Node.js 18+, npm e Codex CLI com plugins são necessários. O My Tools instala o plugin upstream e aplica um pequeno patch autorizado de provedor: Decisions API do OpenRouter, `typesafe/jev-1.13` e `OPENROUTER_API_KEY`. O contrato tipado e o motor de poda permanecem upstream, sem tradução de chat ou comando de poda próprio.
 
 ```bash
 my-tools install jev-pruner
-my-tools integrate jev-pruner           # prévia
-my-tools integrate jev-pruner --apply   # plugin oficial, compilado e com SHA aceito
+my-tools integrate jev-pruner --apply
 my-tools doctor
+# Instalação anterior ao ajuste: my-tools repair jev-pruner
 ```
 
-Instalação usa Git fixado, `npm ci` com lock e sem scripts de instalação, e `npm run build` upstream. A fonte e os artefatos são verificados por hash; testes e typecheck upstream são executados sem chave nem conversa real. O plugin mantém seus arquivos originais, incluindo a skill `jev-pruner`. Não é um MCP e não usa `my-tools` para executar comandos.
+A instalação compila/verifica fonte, patch e cache. Uma mudança upstream que não aceita o patch impede ativação. No desktop, o wrapper reutiliza a chave privada do Siftr se ela não estiver no ambiente, sem duplicar credenciais. Outro ambiente precisa de credencial e rede próprias. Não inclua chave em argumentos, chat ou Git.
 
-Cadastre uma chave **TypeSafe** no mecanismo de ambiente/segredos do cliente para disponibilizar `TYPESAFE_API_KEY`. A credencial OpenRouter do Siftr não é intercambiável por suposição. Não cole chaves no chat, argumentos ou Git. Inicie uma sessão nova e revise o hook `jev-pruner` em `/hooks`, conforme a documentação upstream. Não elevamos sandbox, acesso à rede ou limites de saída globalmente.
+A skill `jev-pruner` chama `node <plugin-root>/dist/codex/run.js -- <comando>`. Exemplo de pedido: `$jev-pruner execute os testes autorizados pelo wrapper`. Quatro skills do my-skills orientam uso em resolução, ciclos de implementação, verificação e smoke. Apenas stdout elegível acima de 10.000 tokens estimados é podado; outras chamadas não são interceptadas. Stderr, falhas e exit status são preservados, e o original fica em `.jev-pruner/` para recuperação.
 
-Exemplo na conversa:
+O provedor recebe histórico e stdout: autorização deve abranger ambos. O filtro do comando atual não saneia mensagens anteriores. Testes live usam sessão sintética dedicada. Não use para conteúdo sensível, dados estruturados, leitura integral, diffs, servidores ou TTY. Não aplique também Siftr `filter_output` ao mesmo resultado.
 
-```text
-$jev-pruner Execute o comando de testes autorizado pelo wrapper e informe o resultado.
-```
-
-A skill oficial chama `node <plugin-root>/dist/codex/run.js -- <comando>`. Só stdout acima de 10.000 tokens **estimados** é elegível; comandos não envolvidos pelo wrapper passam normalmente. Erros, documentos/código reconhecidos e formatos protegidos podem passar completos. Ausência de chave, histórico ou acesso ao provedor preserva a saída original. Só os marcadores de omissão comprovam poda.
-
-**Dados enviados:** histórico de mensagens e entradas/resultados de ferramentas da sessão, além da saída elegível, são enviados ao TypeSafe. O filtro de segredos do comando atual não saneia automaticamente todo esse histórico. Ativação em conversas privadas exige autorização para esse conteúdo; use sessão dedicada com dados sintéticos/públicos para o primeiro teste. Os hooks de captura AI-Memory não controlam esse envio. Não leia transcrições privadas para montar testes.
-
-Originais ficam em `.jev-pruner/` no cwd, com permissões privadas e `.gitignore` interno. Leia o arquivo do rodapé para recuperar detalhes, sem repetir o comando. Falhas de poda não são economia demonstrada. Sessões existentes precisam recarregar o plugin; desktop/Cloud e confiança efetiva no hook precisam de verificação própria.
-
-O `filter_output` do Siftr lê um arquivo que já existe. Pruner envolve a execução de um comando e poda stdout antes de retornar ao agente, usando contexto da conversa. Não aplique os dois sobre a mesma saída por rotina. Veja [uso e atualização do Pruner](docs/jev-pruner.md).
+Uma fixture local foi reduzida de 22.710 para 2.930 tokens estimados, com diagnósticos e original preservados. Não é percentual de economia da tarefa inteira. O agente em uma sessão CLI nova também chamou o wrapper e recebeu poda real. Desktop precisa recarregar e confiar no hook; Cloud precisa instalar/configurar no próprio ambiente e disponibilizar histórico compatível. Veja [uso, evidência e requisitos Cloud](docs/jev-pruner.md).
 
 ## Uso nativo
 
