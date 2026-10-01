@@ -63,7 +63,7 @@ Os caminhos são ilustrativos. Pelo MCP, o agente chama as mesmas operações of
 
 ## Dados e credenciais
 
-O Siftr envia caminhos, nomes de definições e trechos ao OpenRouter/TypeSafe. Só use conteúdo autorizado para esse envio. Exclua credenciais, arquivos de ambiente, dados financeiros/de clientes e logs privados. O MCP oficial não impõe allowlist de projeto por projeto. Caminhos e globs precisam respeitar a autorização da tarefa. `focused_read` e `filter_output` também exigem arquivos autorizados.
+O Siftr envia caminhos, nomes de definições e trechos ao OpenRouter/TypeSafe. Só use conteúdo autorizado para esse envio. Exclua credenciais, arquivos de ambiente, dados financeiros/de clientes e logs privados. O MCP oficial não impõe allowlist por projeto. Caminhos e globs precisam respeitar a autorização da tarefa. `focused_read` e `filter_output` também exigem arquivos autorizados.
 
 `siftr setup` grava a chave na configuração pessoal do próprio Siftr. A fonte upstream carrega variáveis do processo, `.env` do cwd/pais e configuração pessoal; isso é comportamento oficial, sem patch nosso. O MCP precisa receber a chave pelo mecanismo oficial. A chave fica fora do Git, em armazenamento pessoal; não é um cofre criptografado.
 
