@@ -22,10 +22,10 @@ def registry(manager):
     if set(value) != {'schema_version', 'tools'} or value['schema_version'] != 1 or not isinstance(value['tools'], dict):
         raise ToolError('Registro de CLI inválido')
     for name, entry in value['tools'].items():
-        if name not in FIELDS or not isinstance(entry, dict) or set(entry) != set(FIELDS[name]) | {'active'}:
+        if name not in FIELDS or not isinstance(entry, dict) or set(entry) not in (set(FIELDS[name]) | {'active'}, set(FIELDS[name]) | {'active', 'claude_skill'}):
             raise ToolError('Registro de CLI inválido')
         manager.location(name, entry['active'])
-        if any(not isinstance(entry[k], str) or not Path(entry[k]).is_absolute() for k in FIELDS[name]):
+        if any(not isinstance(entry[k], str) or not Path(entry[k]).is_absolute() for k in (*FIELDS[name], *(['claude_skill'] if 'claude_skill' in entry else []))):
             raise ToolError('Destinos da CLI precisam de caminhos absolutos')
     return value
 
@@ -34,13 +34,18 @@ def switch(manager, entry, commit, name=NAME):
     links = [Path(entry[k]) for k in FIELDS[name]]
     dests = targets(manager, commit, name)
     root = manager.home / 'tools' / name
+    if 'claude_skill' in entry:
+        links.append(Path(entry['claude_skill']))
+        dests.append(Path(entry['skill']))
     previous = []
     # Preflight every destination before modifying any link.
     for link, dest in zip(links, dests):
-        if not dest.exists():
+        is_claude = 'claude_skill' in entry and link == Path(entry['claude_skill'])
+        if not is_claude and not dest.exists():
             raise ToolError('CLI/skill oficial ausente')
         if link.exists() or link.is_symlink():
-            if not link.is_symlink() or not link.resolve().is_relative_to(root):
+            owned = link.is_symlink() and (os.readlink(link) == entry['skill'] if is_claude else link.resolve().is_relative_to(root))
+            if not owned:
                 raise ToolError('CLI/skill ocupada por instalação externa; preservada')
             previous.append(os.readlink(link))
         else:
@@ -81,11 +86,12 @@ def integrate(manager, name, apply=False, bin_dir=None):
     commit = manager.state()['tools'][name]['active']
     folder = Path(bin_dir).expanduser().resolve() if bin_dir else Path.home() / '.local/bin'
     entry = {'command': str(folder / name), 'skill': str(Path.home() / '.agents/skills' / SKILLS[name]), 'active': commit}
+    entry['claude_skill'] = str(Path.home() / '.claude/skills' / SKILLS[name])
     if name == 'jev-browser':
         entry['mcp_command'] = str(folder / 'jev-browser-mcp')
     value = registry(manager)
     old = value['tools'].get(name)
-    if old and any(old[k] != entry[k] for k in FIELDS[name]):
+    if old and any(old[k] != entry[k] for k in (*FIELDS[name], *(['claude_skill'] if 'claude_skill' in old else []))):
         raise ToolError('Destinos já registrados; preserve a integração existente')
     if apply:
         changes = switch(manager, entry, commit, name)
@@ -123,5 +129,11 @@ def diagnose(manager, name, commit):
             or Path(entry[k]).resolve() != dest.resolve()
             for k, dest in zip(FIELDS[name], targets(manager, commit, name))):
         raise ToolError('Integração CLI/skill diverge da revisão ativa')
+    if 'claude_skill' in entry:
+        link = Path(entry['claude_skill'])
+        if not link.is_symlink() or os.readlink(link) != entry['skill'] or link.resolve() != Path(entry['skill']).resolve():
+            raise ToolError('Skill Claude diverge do link gerenciado')
     return {'official_command': entry['command'], 'official_skill': entry['skill'],
+            'claude_skill_status': 'linked' if 'claude_skill' in entry else 'not_registered',
+            **({'official_claude_skill': entry['claude_skill']} if 'claude_skill' in entry else {}),
             **({'official_mcp_command': entry['mcp_command']} if name == 'jev-browser' else {})}

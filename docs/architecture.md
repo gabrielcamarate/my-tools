@@ -43,3 +43,14 @@ O instalador `jev-browser-source-v1` fixa fonte/licença/SHA, aplica patch de tr
 `commands.json` também registra Jev Browser: CLI, MCP e skill completa. Os três links trocam juntos após preflight; falhas de link/registro/estado compensam a versão anterior, preservando destinos externos. O cliente registra o entrypoint estável com o nome `jev-playwright`; não há proxy nem wrapper operacional. A skill é identificada como `jev-browser-playwright` para evitar colisão de catálogo com Jev Browser Control. Sua referência relativa aponta para os documentos preservados no checkout upstream.
 
 Browser Chromium e dependências de sistema têm ciclo separado e são preparados pelo instalador oficial Playwright no ambiente. A gestão de SHA não remove o cache compartilhado de browsers. Não transporta configuração pessoal, cookies ou credenciais para projetos/Cloud. O patch OpenRouter preserva state/questions, validação de escolha, timeout/retry e respostas tipadas; adapta só URL/autenticação/modelo e carrega a credencial compartilhada somente no destino OpenRouter HTTPS.
+
+## Descoberta das skills no Claude
+
+`my-tools integrate jev-test-filter --apply` e `my-tools integrate jev-browser --apply`
+também criam links individuais em `~/.claude/skills` para os links estáveis de
+`~/.agents/skills`. A fonte upstream continua única e updates/rollback acompanham
+ambos os clientes. Não há cópia de skills nem MCP registrado automaticamente no Claude.
+Reaplique integrate nas instalações antigas: o registro antigo é compatível, mas
+`doctor` informa `claude_skill_status: not_registered` até essa reconciliação.
+Conflitos externos abortam antes de trocar qualquer link; falhas compensam a troca.
+Após configurar, uma nova sessão pode ser necessária para atualizar o catálogo.

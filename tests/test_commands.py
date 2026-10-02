@@ -172,3 +172,65 @@ class BrowserCommandTests(unittest.TestCase):
                 browser.apply_provider(folder)
             self.assertEqual(path.read_text(), 'conflicting provider')
             self.assertFalse((Path(folder) / 'src/provider.ts').exists())
+
+
+class ClaudeSkillTests(CommandTests):
+    def setUp(self):
+        super().setUp()
+        self.entry['claude_skill'] = str(self.home / 'claude-skills/jev-test-filter')
+        commands.switch(self.manager, self.entry, self.first)
+        atomic_json(self.manager.home / 'commands.json', {'schema_version': 1, 'tools': {commands.NAME: self.entry}})
+
+    def test_stable_claude_alias_tracks_update_and_rollback(self):
+        alias = Path(self.entry['claude_skill'])
+        for commit in (self.second, self.first):
+            commands.synchronize(self.manager, commands.NAME, commit)
+            self.assertEqual(alias.resolve(), commands.targets(self.manager, commit)[1])
+            self.assertEqual(commands.diagnose(self.manager, commands.NAME, commit)['claude_skill_status'], 'linked')
+
+    def test_foreign_claude_directory_preserved_before_switch(self):
+        alias = Path(self.entry['claude_skill']); alias.unlink(); alias.mkdir()
+        (alias / 'user.txt').write_text('user work')
+        with self.assertRaises(ToolError):
+            commands.synchronize(self.manager, commands.NAME, self.second)
+        self.assert_first()
+        self.assertEqual((alias / 'user.txt').read_text(), 'user work')
+
+    def test_claude_link_failure_restores_candidate(self):
+        original = commands.replace_link
+        def replace(link, dest):
+            if link == Path(self.entry['claude_skill']):
+                raise OSError('synthetic Claude failure')
+            original(link, dest)
+        with patch.object(commands, 'replace_link', side_effect=replace):
+            with self.assertRaises(OSError):
+                commands.synchronize(self.manager, commands.NAME, self.second)
+        self.assert_first()
+
+    def test_legacy_registry_is_readable_and_reports_missing_claude(self):
+        legacy = {k:v for k,v in self.entry.items() if k != 'claude_skill'}
+        atomic_json(self.manager.home / 'commands.json', {'schema_version': 1, 'tools': {commands.NAME: legacy}})
+        self.assertEqual(commands.diagnose(self.manager, commands.NAME, self.first)['claude_skill_status'], 'not_registered')
+
+    def prepare_legacy_integration(self):
+        Path(self.entry['claude_skill']).unlink()
+        self.entry['skill'] = str(self.home / '.agents/skills/jev-test-filter')
+        self.entry.pop('claude_skill')
+        commands.switch(self.manager, self.entry, self.first)
+        atomic_json(self.manager.home / 'commands.json', {'schema_version': 1, 'tools': {commands.NAME: self.entry}})
+
+    def test_integrate_legacy_creates_claude_alias_idempotently(self):
+        self.prepare_legacy_integration()
+        with patch.object(Path, 'home', return_value=self.home), patch.object(self.manager, 'resolve'), patch.object(self.manager, 'state', return_value={'tools': {commands.NAME: {'active': self.first}}}):
+            for _ in range(2):
+                result = commands.integrate(self.manager, commands.NAME, apply=True, bin_dir=self.home / 'bin')
+                self.assertEqual(Path(result['claude_skill']).resolve(), commands.targets(self.manager, self.first)[1])
+
+    def test_failed_legacy_registration_removes_new_claude_alias(self):
+        self.prepare_legacy_integration()
+        with patch.object(Path, 'home', return_value=self.home), patch.object(self.manager, 'resolve'), patch.object(self.manager, 'state', return_value={'tools': {commands.NAME: {'active': self.first}}}), patch.object(commands, 'atomic_json', side_effect=OSError('synthetic persistence failure')):
+            with self.assertRaises(OSError):
+                commands.integrate(self.manager, commands.NAME, apply=True, bin_dir=self.home / 'bin')
+        self.assertFalse((self.home / '.claude/skills/jev-test-filter').is_symlink())
+        self.assert_first()
+        self.assertNotIn('claude_skill', commands.registry(self.manager)['tools'][commands.NAME])

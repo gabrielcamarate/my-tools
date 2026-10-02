@@ -153,3 +153,14 @@ my-tools doctor
 A CLI e o MCP são os entrypoints upstream, publicados por links estáveis que acompanham update/rollback. O patch muda somente provedor e orientação/testes associados. A skill upstream completa fica vinculada em `~/.agents/skills/jev-browser-playwright`, fora do my-skills. Esse nome e o registro MCP `jev-playwright` evitam colisão com outro Jev Browser Control usado no Chrome pessoal; comandos e ferramentas MCP upstream não são renomeados. Reabra/reconecte clientes existentes após o registro.
 
 Operações nativas não exigem inferência. Metas semânticas usam `OPENROUTER_API_KEY`, com o mesmo fallback privado do Siftr; não copie a chave para cada projeto. Use apenas páginas/dados autorizados. A ferramenta não assume o navegador pessoal nem substitui revisão visual, gates ou confirmação de ações.
+
+## Descoberta das skills no Claude
+
+`my-tools integrate jev-test-filter --apply` e `my-tools integrate jev-browser --apply`
+também criam links individuais em `~/.claude/skills` para os links estáveis de
+`~/.agents/skills`. A fonte upstream continua única e updates/rollback acompanham
+ambos os clientes. Não há cópia de skills nem MCP registrado automaticamente no Claude.
+Reaplique integrate nas instalações antigas: o registro antigo é compatível, mas
+`doctor` informa `claude_skill_status: not_registered` até essa reconciliação.
+Conflitos externos abortam antes de trocar qualquer link; falhas compensam a troca.
+Após configurar, uma nova sessão pode ser necessária para atualizar o catálogo.
