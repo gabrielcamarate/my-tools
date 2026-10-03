@@ -15,3 +15,14 @@ Em 30/09/2026, chamadas das quatro ferramentas oficiais foram verificadas com c�
 Na versão 0.3.0 foram removidos a CLI de busca adaptada, cadastro próprio de chaves, perfis e configuração por projeto. O ciclo de instalação verifica fonte e interface upstream sem modificar suas operações ou carregamento de credenciais. Os testes de instalação e recuperação continuam obrigatórios.
 
 Em 30/09/2026, v0.5.0: 45 testes do controlador e check de publicação passaram; compilação, typecheck, testes upstream e dois testes do provedor passaram. Teste live sintético OpenRouter e sessão real do Codex CLI confirmaram poda, linhas necessárias, stderr, status e recuperação original. O teste do agente usou apenas o Pruner em CODEX_HOME isolado e confiança de hook para aquela invocação; não alterou a confiança global. Não é prova de execução em Cloud nem medição comparável de economia total. Veja docs/jev-pruner.md.
+
+## 2026-10-02 — Descoberta e escolha das ferramentas
+
+- Registro CLI legado compatível; integrate acrescenta alias Claude estável sem copiar fonte.
+- 71 testes do controlador PASS: update/rollback, preflight de terceiros, falha parcial e de persistência, migração idempotente e remoção de alias novo na compensação.
+- Check público e diff check PASS. Doctor local: quatro ferramentas ready_offline; duas skills upstream com alias Claude linked.
+- Siftr chamado pelo MCP numa fixture sintética pública: quatro arquivos pesquisados; resultados conferidos como sugestões, não prova exaustiva.
+- Pruner no wrapper oficial com histórico/saída sintéticos: 22.710 para 2.938 tokens estimados, marcador de poda presente, quatro diagnósticos obrigatórios preservados, stderr/exit status e original preservados. Pasta própria removida ao final. Não é economia de tokens da tarefa inteira nem teste de histórico privado desta sessão.
+- Jev Browser por MCP isolado: cenário sintético com dados aninhados complete, cinco campos no readback, unobserved vazio, registro conferido independentemente e uma submissão. Browser/MCP/servidor de fixture próprios encerrados.
+- Test Filter live em fixture sintética: 3/20 testes selecionados; três regressões preservadas, sem chave segue fallback; cleanup próprio concluído. Não dispensa gates finais.
+- Nenhuma prova de seleção implícita universal, aceitação Cloud ou redução de duração de tarefas reais. Configuração de cliente pessoal e credenciais continuam fora do Git.

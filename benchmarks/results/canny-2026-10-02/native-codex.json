@@ -1,0 +1,43 @@
+{
+  "native_codex_cli": true,
+  "isolated_home": true,
+  "credential_values_copied": false,
+  "seconds": 18.191,
+  "exit": 0,
+  "timeout": false,
+  "events": [
+    {
+      "phase": "post",
+      "tool": "Bash",
+      "kind": "command"
+    },
+    {
+      "phase": "post",
+      "tool": "Bash",
+      "kind": "command"
+    },
+    {
+      "phase": "post",
+      "tool": "apply_patch",
+      "kind": "edit"
+    },
+    {
+      "phase": "post",
+      "tool": "Bash",
+      "kind": "command"
+    },
+    {
+      "phase": "stop",
+      "tool": "",
+      "kind": "stop"
+    }
+  ],
+  "verdicts": [
+    {
+      "phase": "stop",
+      "decision": "allow"
+    }
+  ],
+  "judgments": [],
+  "fixed": true
+}

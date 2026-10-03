@@ -20,3 +20,14 @@ Teste o caminho real em sessão nova, confira as chamadas e avalie a resposta. I
 ## Jev Pruner
 
 `gabriel-github-resolution`, `gabriel-loop-engineering`, `gabriel-verification-planning` e `gabriel-release-smoke-test` remetem à skill do plugin `jev-pruner` para logs extensos autorizados. A chamada é o wrapper upstream, sem MCP ou alias de operação no My Tools. Não aplicar também filter_output sobre a mesma saída. Seleção por skill não intercepta automaticamente todas as chamadas; histórico, chave, rede e hook são necessários.
+
+## Descoberta das skills no Claude
+
+`my-tools integrate jev-test-filter --apply` e `my-tools integrate jev-browser --apply`
+também criam links individuais em `~/.claude/skills` para os links estáveis de
+`~/.agents/skills`. A fonte upstream continua única e updates/rollback acompanham
+ambos os clientes. Não há cópia de skills nem MCP registrado automaticamente no Claude.
+Reaplique integrate nas instalações antigas: o registro antigo é compatível, mas
+`doctor` informa `claude_skill_status: not_registered` até essa reconciliação.
+Conflitos externos abortam antes de trocar qualquer link; falhas compensam a troca.
+Após configurar, uma nova sessão pode ser necessária para atualizar o catálogo.
