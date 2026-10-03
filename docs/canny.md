@@ -18,7 +18,7 @@ canny replay
 canny remove
 ```
 
-O upstream não contém skill nem MCP nesta revisão. A instalação gerenciada publica somente a CLI. Hooks não foram ativados globalmente nem nos projetos consumidores; ativação foi testada em fixtures próprias. O modo automático depende de projeto trusted, hooks revisados/confiados e sessão que os carregou. `status` sem eventos não significa supervisão funcionando. Instruções nas skills orientam uso quando já ativo, sem substituir o mecanismo.
+O upstream não contém skill nem MCP nesta revisão. A instalação gerenciada publica somente a CLI. A adoção inicial testou ativação em fixtures. Em 02/10/2026, Gabriel autorizou a configuração pessoal: os quatro hooks Codex foram instalados com `canny init --codex --global`, revisados e confiados pela API oficial do cliente. Hooks e confiança preexistentes foram preservados. A descoberta local foi confirmada nos cinco checkouts, sem erros. Uma sessão desktop já aberta ainda precisa recarregar seus hooks; não se presume carregamento retroativo. Isso descreve o host validado, não ativa hooks pessoais de quem clonar o repositório. O modo automático depende de projeto trusted, hooks revisados/confiados e sessão que os carregou. `status` sem eventos não significa supervisão funcionando. Instruções nas skills orientam uso quando já ativo, sem substituir o mecanismo.
 
 ## Provedor e dados
 

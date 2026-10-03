@@ -14,3 +14,5 @@ Repositório público de programas reutilizáveis e protocolos de avaliação.
 - Não habilite captura de memória nem altere projetos consumidores como efeito de instalar este pacote.
 - Ferramentas não concedem autorização para merge, deploy, publicação ou envio de dados.
 - Uma checagem offline comprova compatibilidade limitada, não acurácia Jev nem economia Codex.
+
+- Em 02/10/2026 Gabriel autorizou publicar cada nova integração de ferramenta na main remota após os checks obrigatórios. Branch/PR são preparação, não conclusão. Verifique head/base/CI e confirme origin/main; não force push nem inclua alterações alheias. Essa autorização não concede deploy/produção ou operações nos projetos consumidores.
