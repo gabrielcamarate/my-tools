@@ -13,6 +13,7 @@ O controlador usa Python 3.11+ e biblioteca padrão; Linux é o alvo validado. R
 | [Siftr](https://github.com/Bentlybro/siftr) | CLI `siftr` e MCP oficial `siftr mcp` | Experimental; quatro ferramentas disponíveis |
 | [Jev Pruner](https://github.com/tamaratran/jev-pruner) | Plugin/skill oficial Codex e wrapper upstream | Experimental: OpenRouter, engine upstream preservado e poda live verificada |
 | [Jev Test Filter](https://github.com/mizchi/jev-test-filter) | CLI `jev-test-filter` e skill upstream | Experimental: seleção live via OpenRouter, preservando gates finais |
+| [Canny](https://github.com/qkal/Canny) | CLI `canny` e hooks upstream | Experimental: OpenRouter e ledger de evidência; ativação/confiança por projeto; Cloud sem hooks não é supervisionado |
 | [Jev Browser](https://github.com/tontoko/jev-browser) | CLI `jev-browser`, MCP `jev-browser-mcp` e skill upstream | Experimental: Chromium isolado, OpenRouter e gravação/readback live verificados |
 
 O MCP do Siftr oferece `semantic_search`, `focused_read`, `pick_relevant` e `filter_output` (experimental). Fonte upstream intacta; não há proxy ou tradução dos nomes/parâmetros.
@@ -164,3 +165,19 @@ Reaplique integrate nas instalações antigas: o registro antigo é compatível,
 `doctor` informa `claude_skill_status: not_registered` até essa reconciliação.
 Conflitos externos abortam antes de trocar qualquer link; falhas compensam a troca.
 Após configurar, uma nova sessão pode ser necessária para atualizar o catálogo.
+
+## Canny com OpenRouter
+
+Node.js 22+, Git e npm/npx são necessários. A instalação obtém a revisão aceita do Canny 0.3.0 e aplica somente o ajuste de provedor; compila com o pnpm fixado pelo upstream. Não há MCP nem skill upstream nesta revisão.
+
+```bash
+my-tools install canny
+my-tools integrate canny --apply
+# Na raiz do projeto que será supervisionado, após revisar envio de dados:
+canny init --codex
+# No Codex CLI: /hooks para revisar e confiar nos hooks; projeto também precisa estar trusted.
+canny status
+canny replay
+```
+
+O comando estável acompanha update/rollback. A integração publica a CLI, não ativa hooks pessoais ou de todos os projetos. Nos testes, bloqueou conclusão sem check e após teste falhando, liberando após um teste aprovado. Uma sessão CLI isolada registrou edição/check/conclusão pelos hooks oficiais. Não há economia de tokens comprovada; o benefício é evidência e possível redução de retrabalho. O modo padrão pode permitir outra conclusão com aviso, e um check reconhecido não prova toda a tarefa. Veja [limites, dados enviados, evidência e Cloud](docs/canny.md).

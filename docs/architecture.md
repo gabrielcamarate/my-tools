@@ -54,3 +54,9 @@ Reaplique integrate nas instalações antigas: o registro antigo é compatível,
 `doctor` informa `claude_skill_status: not_registered` até essa reconciliação.
 Conflitos externos abortam antes de trocar qualquer link; falhas compensam a troca.
 Após configurar, uma nova sessão pode ser necessária para atualizar o catálogo.
+
+## Canny
+
+`canny-source-v1` obtém o SHA aceito e aplica patch de provedor com allowlist. Verifica o contrato antes de executar scripts, instala devDependencies com lock e scripts de instalação desativados, compila e registra hashes de fonte/dist/patch. O runtime oficial não tem dependências externas. Smoke checks usam HOME/TMPDIR isolados e chave vazia. O pacote pnpm 12.4.1 também é fixado.
+
+`commands.json` registra somente `command/active` para Canny, sem inventar skill/MCP. Preflight preserva comandos externos; update/rollback e falhas de persistência restauram link/registro/estado. `integrate` não toca hooks. O opt-in `canny init --codex` é feito no projeto consumidor, preservando entradas de outros hooks; a confiança pertence ao cliente e precisa de revisão separada. `doctor` não comprova ativação ou confiança: informa essa pendência explicitamente.

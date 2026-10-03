@@ -6,12 +6,14 @@ import uuid
 from .core import ToolError, atomic_json, read_json
 
 NAME = 'jev-test-filter'
-FIELDS = {NAME: ('command', 'skill'), 'jev-browser': ('command', 'mcp_command', 'skill')}
+FIELDS = {NAME: ('command', 'skill'), 'jev-browser': ('command', 'mcp_command', 'skill'), 'canny': ('command',)}
 SKILLS = {NAME: NAME, 'jev-browser': 'jev-browser-playwright'}
 
 
 def targets(manager, commit, name=NAME):
     source = manager.location(name, commit) / 'source'
+    if name == 'canny':
+        return [source / 'dist/cli.js']
     return ([source / 'dist/cli.js', source / 'dist/mcp-stdio.js', source / 'skills/jev-browser']
             if name == 'jev-browser' else [source / 'dist/cli.js', source / 'skills' / NAME])
 
@@ -22,7 +24,7 @@ def registry(manager):
     if set(value) != {'schema_version', 'tools'} or value['schema_version'] != 1 or not isinstance(value['tools'], dict):
         raise ToolError('Registro de CLI inválido')
     for name, entry in value['tools'].items():
-        if name not in FIELDS or not isinstance(entry, dict) or set(entry) not in (set(FIELDS[name]) | {'active'}, set(FIELDS[name]) | {'active', 'claude_skill'}):
+        if name not in FIELDS or not isinstance(entry, dict) or set(entry) not in (set(FIELDS[name]) | {'active'}, set(FIELDS[name]) | ({'active', 'claude_skill'} if name in SKILLS else {'active'})):
             raise ToolError('Registro de CLI inválido')
         manager.location(name, entry['active'])
         if any(not isinstance(entry[k], str) or not Path(entry[k]).is_absolute() for k in (*FIELDS[name], *(['claude_skill'] if 'claude_skill' in entry else []))):
@@ -85,8 +87,10 @@ def integrate(manager, name, apply=False, bin_dir=None):
     manager.resolve(name)
     commit = manager.state()['tools'][name]['active']
     folder = Path(bin_dir).expanduser().resolve() if bin_dir else Path.home() / '.local/bin'
-    entry = {'command': str(folder / name), 'skill': str(Path.home() / '.agents/skills' / SKILLS[name]), 'active': commit}
-    entry['claude_skill'] = str(Path.home() / '.claude/skills' / SKILLS[name])
+    entry = {'command': str(folder / name), 'active': commit}
+    if name in SKILLS:
+        entry['skill'] = str(Path.home() / '.agents/skills' / SKILLS[name])
+        entry['claude_skill'] = str(Path.home() / '.claude/skills' / SKILLS[name])
     if name == 'jev-browser':
         entry['mcp_command'] = str(folder / 'jev-browser-mcp')
     value = registry(manager)
@@ -133,6 +137,8 @@ def diagnose(manager, name, commit):
         link = Path(entry['claude_skill'])
         if not link.is_symlink() or os.readlink(link) != entry['skill'] or link.resolve() != Path(entry['skill']).resolve():
             raise ToolError('Skill Claude diverge do link gerenciado')
+    if name == 'canny':
+        return {'official_command': entry['command'], 'hook_status': 'project_activation_and_host_trust_not_verified'}
     return {'official_command': entry['command'], 'official_skill': entry['skill'],
             'claude_skill_status': 'linked' if 'claude_skill' in entry else 'not_registered',
             **({'official_claude_skill': entry['claude_skill']} if 'claude_skill' in entry else {}),

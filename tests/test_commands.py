@@ -234,3 +234,88 @@ class ClaudeSkillTests(CommandTests):
         self.assertFalse((self.home / '.claude/skills/jev-test-filter').is_symlink())
         self.assert_first()
         self.assertNotIn('claude_skill', commands.registry(self.manager)['tools'][commands.NAME])
+
+
+class CannyCommandTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name)
+        self.manager = Manager(home=self.home / 'storage')
+        self.first, self.second = '1' * 40, '2' * 40
+        for commit in (self.first, self.second):
+            cli, = commands.targets(self.manager, commit, 'canny')
+            cli.parent.mkdir(parents=True)
+            cli.write_text('synthetic executable')
+        self.entry = {'command': str(self.home / 'bin/canny'), 'active': self.first}
+        commands.switch(self.manager, self.entry, self.first, 'canny')
+        atomic_json(self.manager.home / 'commands.json', {'schema_version': 1, 'tools': {'canny': self.entry}})
+
+    def test_update_and_rollback_command_without_invented_skill(self):
+        for commit in (self.second, self.first):
+            commands.synchronize(self.manager, 'canny', commit)
+            self.assertEqual(Path(self.entry['command']).resolve(), commands.targets(self.manager, commit, 'canny')[0])
+            self.assertNotIn('official_skill', commands.diagnose(self.manager, 'canny', commit))
+
+    def test_registry_failure_restores_command(self):
+        with patch.object(commands, 'atomic_json', side_effect=OSError('synthetic failure')):
+            with self.assertRaises(OSError):
+                commands.synchronize(self.manager, 'canny', self.second)
+        self.assertEqual(Path(self.entry['command']).resolve(), commands.targets(self.manager, self.first, 'canny')[0])
+        self.assertEqual(commands.registry(self.manager)['tools']['canny']['active'], self.first)
+
+    def test_foreign_executable_is_preserved(self):
+        link = Path(self.entry['command']); link.unlink(); link.write_text('user tool')
+        with self.assertRaises(ToolError):
+            commands.synchronize(self.manager, 'canny', self.second)
+        self.assertEqual(link.read_text(), 'user tool')
+
+    def test_controller_failure_restores_registry(self):
+        from my_tools import canny
+        self.manager.save({'schema_version': 1, 'tools': {'canny': {
+            'active': self.first, 'previous': None, 'accepted': [self.first, self.second], 'catalog_commit': self.first}}})
+        with patch.object(canny, 'check'), patch.object(self.manager, 'save', side_effect=OSError('synthetic failure')):
+            with self.assertRaises(OSError):
+                self.manager.activate('canny', self.second)
+        self.assertEqual(commands.registry(self.manager)['tools']['canny']['active'], self.first)
+        self.assertEqual(Path(self.entry['command']).resolve(), commands.targets(self.manager, self.first, 'canny')[0])
+
+    def test_patch_conflict_preserves_source(self):
+        from my_tools import canny
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'src/jev.ts'; path.parent.mkdir(); path.write_text('conflicting provider')
+            with self.assertRaises(ToolError):
+                canny.apply_provider(folder)
+            self.assertEqual(path.read_text(), 'conflicting provider')
+            self.assertFalse((Path(folder) / 'src/provider.ts').exists())
+
+    def test_integrate_is_command_only_and_idempotent(self):
+        with patch.object(Path, 'home', return_value=self.home), patch.object(self.manager, 'resolve'), patch.object(self.manager, 'state', return_value={'tools': {'canny': {'active': self.first}}}):
+            for _ in range(2):
+                result = commands.integrate(self.manager, 'canny', True, self.home / 'bin')
+                self.assertNotIn('skill', result)
+                self.assertNotIn('claude_skill', result)
+            self.assertFalse((self.home / '.codex/hooks.json').exists())
+
+    def test_smoke_hides_integrated_canny_and_keeps_build_tools(self):
+        from my_tools import canny
+        import os
+        import shutil
+        source = self.manager.location('canny', self.first)
+        spec = self.manager.tools['canny']
+        atomic_json(source / 'installation.json', {'schema_version': 1, 'commit': self.first,
+            'repository': spec['repository'], 'installer': spec['installer'],
+            'provider_patch_sha256': 'synthetic', 'hashes': {}})
+        Path(self.entry['command']).resolve().chmod(0o755)
+        env = {'PATH': str(self.home / 'bin') + os.pathsep + os.environ.get('PATH', ''), 'HOME': str(self.home)}
+        def verify(argv, **kwargs):
+            supplied = kwargs['env']
+            self.assertIsNone(shutil.which('canny', path=supplied['PATH']))
+            for name in ('node', 'npx', 'pnpm', 'git'):
+                if shutil.which(name, path=env['PATH']):
+                    self.assertIsNotNone(shutil.which(name, path=supplied['PATH']))
+            self.assertEqual(supplied['OPENROUTER_API_KEY'], '')
+            return ''
+        with patch.object(canny, 'hashes', return_value={}), patch.object(canny, 'provider_hash', return_value='synthetic'), patch.object(canny, 'contract'), patch.object(canny, 'build_env', return_value=env), patch.object(canny, 'checked', side_effect=verify) as calls:
+            canny.check(source, spec, self.first)
+            self.assertEqual(calls.call_count, 3)

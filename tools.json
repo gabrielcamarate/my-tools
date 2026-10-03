@@ -45,6 +45,17 @@
         "OPENROUTER_API_KEY"
       ],
       "installer": "jev-browser-source-v1"
+    },
+    "canny": {
+      "repository": "https://github.com/qkal/Canny.git",
+      "branch": "main",
+      "approved_commit": "f2c5e53779445d60dc4a09d2dbced2308fccb820",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "canny-source-v1"
     }
   }
 }
