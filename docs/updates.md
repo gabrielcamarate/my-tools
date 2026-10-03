@@ -39,3 +39,7 @@ O estado principal, registro nativo e symlink são arquivos distintos. A restaur
 ## Plugins oficiais
 
 Jev Pruner integrado acompanha update/rollback. Como Codex canoniza a fonte local e mantém cache próprio, é necessário remover apenas o plugin/marketplace gerenciado, registrar a nova fonte e reinstalar seu cache. O gestor executa essas operações oficiais e confere os arquivos. Instalações externas/desabilitadas são preservadas. Reconciliação usa integrate --apply; falhas múltiplas podem exigir correção do cliente. Processos já iniciados e confiança de hooks precisam ser revalidados.
+
+## Jeval
+
+Update/rollback aceito acompanha a CLI e as seis skills oficiais, sem alterar código upstream nem implantar o YAML de limiares. Fonte/lock e runtime têm hashes; smoke usa versão/demo no Python isolado. A suíte upstream completa foi executada na adoção, não em todo `doctor`; uma mudança de contrato/dependências exige revisão do instalador e revalidação dirigida antes de aceitação. Não há hook, MCP, chamada API ou coleta automática no avaliador. Conflito externo, runtime inválido ou falha de persistência preservam/compensam os links. A instalação inicial não tem revisão anterior para rollback.

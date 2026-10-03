@@ -1,0 +1,82 @@
+[
+  {
+    "id": "case_00",
+    "text": "Build terminou com exit code 0.",
+    "label": false
+  },
+  {
+    "id": "case_01",
+    "text": "Teste unitário terminou com exit code 1.",
+    "label": true
+  },
+  {
+    "id": "case_02",
+    "text": "ERROR: falha ao conectar ao banco.",
+    "label": true
+  },
+  {
+    "id": "case_03",
+    "text": "WARNING: API antiga; build bem-sucedido.",
+    "label": false
+  },
+  {
+    "id": "case_04",
+    "text": "Todos os 42 testes passaram.",
+    "label": false
+  },
+  {
+    "id": "case_05",
+    "text": "FAIL: esperado 125, recebido 100.",
+    "label": true
+  },
+  {
+    "id": "case_06",
+    "text": "INFO: inicialização concluída.",
+    "label": false
+  },
+  {
+    "id": "case_07",
+    "text": "fatal: repositório não encontrado.",
+    "label": true
+  },
+  {
+    "id": "case_08",
+    "text": "Nenhum erro encontrado.",
+    "label": false
+  },
+  {
+    "id": "case_09",
+    "text": "Timeout: tarefa não concluiu no prazo.",
+    "label": true
+  },
+  {
+    "id": "case_10",
+    "text": "0 failed, 3 skipped, 18 passed.",
+    "label": false
+  },
+  {
+    "id": "case_11",
+    "text": "2 failed, 18 passed.",
+    "label": true
+  },
+  {
+    "id": "case_12",
+    "text": "Falha anterior corrigida; execução atual passou.",
+    "label": false
+  },
+  {
+    "id": "case_13",
+    "text": "Permissão negada; comando abortado.",
+    "label": true
+  },
+  {
+    "id": "case_14",
+    "text": "Depreciação detectada; saída normal, exit 0.",
+    "label": false
+  },
+  {
+    "id": "case_15",
+    "text": "Processo morto, resultado não concluído.",
+    "label": true
+  }
+]

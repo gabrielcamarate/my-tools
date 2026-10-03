@@ -31,3 +31,7 @@ Reaplique integrate nas instalações antigas: o registro antigo é compatível,
 `doctor` informa `claude_skill_status: not_registered` até essa reconciliação.
 Conflitos externos abortam antes de trocar qualquer link; falhas compensam a troca.
 Após configurar, uma nova sessão pode ser necessária para atualizar o catálogo.
+
+## Jeval
+
+`integrate jeval --apply` vincula as seis skills upstream, sem copiá-las no my-skills: `jeval-handoff`, `jeval-instrument-service`, `jeval-labels-harvest`, `jeval-calibration-audit`, `jeval-threshold-from-costs`, `jeval-drift-gate`. `gabriel-verification-planning` e `gabriel-loop-engineering` orientam quando medir decisões rotuladas. Não instrumentar serviços, coletar dados ou alterar gates por efeito de instalar a ferramenta. Use a instalação gerenciada existente; não execute o instalador flutuante mencionado pela skill upstream. Skills orientam uso; não garantem seleção automática de toda tarefa.

@@ -1,0 +1,16 @@
+{"request_id":"case_00","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.02}}}}
+{"request_id":"case_01","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.95}}}}
+{"request_id":"case_02","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.95}}}}
+{"request_id":"case_03","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.04}}}}
+{"request_id":"case_04","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.03}}}}
+{"request_id":"case_05","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.96}}}}
+{"request_id":"case_06","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.03}}}}
+{"request_id":"case_07","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.92}}}}
+{"request_id":"case_08","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.03}}}}
+{"request_id":"case_09","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.82}}}}
+{"request_id":"case_10","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.05}}}}
+{"request_id":"case_11","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.95}}}}
+{"request_id":"case_12","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.03}}}}
+{"request_id":"case_13","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.92}}}}
+{"request_id":"case_14","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.04}}}}
+{"request_id":"case_15","response":{"model":"typesafe/jev-1.13-20260917","answers":{"is_failure":{"type":"noul","noul":0.59}}}}

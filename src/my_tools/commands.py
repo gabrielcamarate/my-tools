@@ -82,6 +82,9 @@ def restore(changes):
 
 
 def integrate(manager, name, apply=False, bin_dir=None):
+    if name == "jeval":
+        from . import jeval
+        return jeval.integrate(manager, name, apply, bin_dir)
     if name not in FIELDS:
         raise ToolError('CLI ainda não registrada')
     manager.resolve(name)
@@ -109,6 +112,9 @@ def integrate(manager, name, apply=False, bin_dir=None):
 
 
 def synchronize(manager, name, commit):
+    if name == "jeval":
+        from . import jeval
+        return jeval.synchronize(manager, name, commit)
     if name not in FIELDS:
         return
     value = registry(manager)
@@ -124,6 +130,9 @@ def synchronize(manager, name, commit):
 
 
 def diagnose(manager, name, commit):
+    if name == "jeval":
+        from . import jeval
+        return jeval.diagnose(manager, name, commit)
     if name not in FIELDS:
         return {}
     entry = registry(manager)['tools'].get(name)

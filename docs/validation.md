@@ -26,3 +26,7 @@ Em 30/09/2026, v0.5.0: 45 testes do controlador e check de publicação passaram
 - Jev Browser por MCP isolado: cenário sintético com dados aninhados complete, cinco campos no readback, unobserved vazio, registro conferido independentemente e uma submissão. Browser/MCP/servidor de fixture próprios encerrados.
 - Test Filter live em fixture sintética: 3/20 testes selecionados; três regressões preservadas, sem chave segue fallback; cleanup próprio concluído. Não dispensa gates finais.
 - Nenhuma prova de seleção implícita universal, aceitação Cloud ou redução de duração de tarefas reais. Configuração de cliente pessoal e credenciais continuam fora do Git.
+
+## 2026-10-02 — Jeval 0.2.0
+
+87 testes do controlador passaram, incluindo nove do ciclo Jeval; check público e diff check passaram. Os 647 testes upstream passaram na adoção. Smoke do instalador usa CLI/version/demo em ambiente temporário; não repete a suíte de 647 testes em cada diagnóstico. Avaliação offline repetível valida acurácia/ECE do controle, concordância HTML/Markdown, recusa de bins inválidos e falta de labels. Teste OpenRouter gerou apenas casos sintéticos; seis skills habilitadas encontradas pelo app-server nativo. HOME limpo passou, sem provar execução Cloud. Veja docs/jeval.md e benchmarks/results/jeval-2026-10-02/.

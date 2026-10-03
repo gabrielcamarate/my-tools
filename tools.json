@@ -56,6 +56,15 @@
         "OPENROUTER_API_KEY"
       ],
       "installer": "canny-source-v1"
+    },
+    "jeval": {
+      "repository": "https://github.com/rlaope/jeval.git",
+      "branch": "main",
+      "approved_commit": "61bdcccf9038ff898e82f9465d1a979f5d68bc6e",
+      "status": "experimental",
+      "license": "Apache-2.0",
+      "credential_environment": [],
+      "installer": "jeval-source-v1"
     }
   }
 }

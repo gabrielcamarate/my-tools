@@ -1,0 +1,21 @@
+generated_at: '2026-10-03 02:15:00Z'
+model: synthetic-injected-errors
+n_records: 200
+actions:
+  investigate_failure:
+    question: is_failure
+    when: failure
+    threshold: 1.0
+    expected_cost_per_case: 1.0
+    auto_rate: 0.0
+    accuracy_auto: null
+    ci:
+      low: 1.0
+      high: 1.0
+    flat_region:
+      low: 0.91
+      high: 1.0
+    models:
+    - synthetic-injected-errors
+    n_records: 200
+    insufficient_data: false

@@ -1,0 +1,16 @@
+{
+  "model": "typesafe/jev-1.13-20260917",
+  "requested_model": "typesafe/jev-1.13",
+  "endpoint": "OpenRouter Decisions API",
+  "requests": 1,
+  "cases": 16,
+  "correct": 16,
+  "latency_ms": 912.418628,
+  "usage": {
+    "input_tokens": 1199,
+    "output_tokens": 308,
+    "cost": 0.000050358
+  },
+  "scope": "synthetic_only",
+  "purpose": "pipeline_validation_not_representative_accuracy"
+}

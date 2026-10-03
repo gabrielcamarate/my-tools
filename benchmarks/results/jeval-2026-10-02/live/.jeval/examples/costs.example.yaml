@@ -1,0 +1,10 @@
+# jeval cost matrix template
+# Copy to costs.yaml and replace the numbers with YOUR costs: every threshold jeval
+# recommends is a direct consequence of these figures. Wrong costs give wrong thresholds.
+actions:
+  - name: auto_refund
+    question: intent
+    when: refund_request
+    cost_false_accept: 50000   # it ran automatically and it was wrong
+    cost_escalate: 2000        # it went to a human
+    cost_false_reject: 0       # it was right and still went to a human

@@ -10,6 +10,7 @@ O controlador usa Python 3.11+ e biblioteca padrão; Linux é o alvo validado. R
 
 | Ferramenta | Interface do agente | Estado |
 |---|---|---|
+| [Jeval](https://github.com/rlaope/jeval) | CLI `jeval` e seis skills upstream | Experimental: avaliação offline de decisões rotuladas; sem chave, hooks ou MCP |
 | [Siftr](https://github.com/Bentlybro/siftr) | CLI `siftr` e MCP oficial `siftr mcp` | Experimental; quatro ferramentas disponíveis |
 | [Jev Pruner](https://github.com/tamaratran/jev-pruner) | Plugin/skill oficial Codex e wrapper upstream | Experimental: OpenRouter, engine upstream preservado e poda live verificada |
 | [Jev Test Filter](https://github.com/mizchi/jev-test-filter) | CLI `jev-test-filter` e skill upstream | Experimental: seleção live via OpenRouter, preservando gates finais |
@@ -181,3 +182,18 @@ canny replay
 ```
 
 O comando estável acompanha update/rollback. A integração publica a CLI, não ativa hooks pessoais ou de todos os projetos. Nos testes, bloqueou conclusão sem check e após teste falhando, liberando após um teste aprovado. Uma sessão CLI isolada registrou edição/check/conclusão pelos hooks oficiais. Não há economia de tokens comprovada; o benefício é evidência e possível redução de retrabalho. O modo padrão pode permitir outra conclusão com aviso, e um check reconhecido não prova toda a tarefa. Veja [limites, dados enviados, evidência e Cloud](docs/canny.md).
+
+## Jeval: medir a confiabilidade das decisões
+
+```bash
+my-tools install jeval
+my-tools integrate jeval --apply
+jeval demo --out-dir /tmp/jeval-demo
+# Para registros autorizados com rótulos:
+jeval ingest decisions.jsonl --root /caminho/avaliacao
+jeval report --root /caminho/avaliacao
+```
+
+Jeval 0.2.0 é uma CLI offline, sem alteração upstream nem chave necessária. Python 3.12/uv instalam o pacote oficial `jeval-cli` a partir da fonte aceita e do `uv.lock`, em runtime separado por SHA. Não use `pip install jeval`: esse nome pertence a outro pacote. Seis skills oficiais ficam vinculadas à fonte no armazenamento My Tools, com links Codex/Claude. Update e rollback acompanham CLI e skills.
+
+O teste real usou decisões Jev via OpenRouter e rótulos sintéticos. A avaliação distinguiu 16 acertos de uma amostra insuficiente; um controle com 40 erros em 200 decisões revelou excesso de confiança. O benefício é verificar qualidade antes de automatizar, sem economia direta de tokens comprovada. Não instrumentamos projetos nem criamos benchmarks automáticos. Cloud precisa instalar runtime/links e receber instruções, mas não depende de MCP ou segredo para avaliar arquivos. Veja [uso, testes e limites](docs/jeval.md).

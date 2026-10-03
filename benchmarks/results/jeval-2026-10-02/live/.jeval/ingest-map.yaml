@@ -1,0 +1,33 @@
+# jeval ingest map
+# Rename the fields of your logs onto the decision-record schema.
+version: 1
+
+# raw field name -> jeval field
+field_map:
+  model: model
+  question_key: question
+  question_type: question_type
+  prediction: prediction
+  confidence: confidence
+  probabilities: probabilities
+  label: label
+  label_source: label_source
+  segment: segment
+  state_tokens: state_tokens
+  latency_ms: latency_ms
+  cost_usd: cost_usd
+  ts: ts
+
+# Fields applied when a row does not carry them.
+defaults:
+  question_type: choice
+
+# A row may carry several questions under this key; each becomes one record.
+questions_field: questions
+
+# Free labels: the human answer that already exists in your own logs.
+# Enabling this turns labeling cost into a mapping exercise.
+label_from: {}
+  # field: resolution.final_department
+  # source: human_override
+  # join_on: ticket_id

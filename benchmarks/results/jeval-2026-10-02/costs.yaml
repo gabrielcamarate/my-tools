@@ -1,0 +1,7 @@
+actions:
+  - name: investigate_failure
+    question: is_failure
+    when: failure
+    cost_false_accept: 20
+    cost_escalate: 1
+    cost_false_reject: 0
