@@ -147,3 +147,16 @@ cada estado intermediário. A disponibilidade de 41 ferramentas MCP também
 pode acrescentar custo de descoberta; não chamar Jev a cada clique conhecido.
 Não há coleta automática de benchmarks. Resultados de tarefas reais pertencem
 ao registro autorizado do projeto consumidor.
+
+## Smoke funcional e suites existentes
+
+No smoke funcional isolado, usar CLI/MCP oficial inclusive para ações
+determinísticas com seletores conhecidos. Um script Playwright ad hoc exige
+dispensa concreta; suites já versionadas e comparações de pixels continuam gates
+do projeto. Reutilizar evidência válida do mesmo candidato, sem repetir efeitos
+apenas para contabilizar uso. Resultado sem confirmação exige reconciliação
+somente leitura antes de qualquer reenvio.
+
+Aceitação CLI sintética: `node scripts/test_browser_cli_live.mjs SOURCE_UPSTREAM`.
+O teste verifica valores e exatamente uma submissão no servidor independente,
+fecha sua sessão e remove somente recursos próprios.

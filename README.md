@@ -206,3 +206,12 @@ chamada/resultado ou dispensa concreta e fallback registrados na tarefa. Ler a s
 não conta como uso. É uma regra de instruções para medir adoção, não interceptação
 global ou prova de economia. Gates finais, autorização de dados e recuperação
 continuam obrigatórios. Não foram alterados instalação, hooks ou credencial.
+
+### Adoção local: correções e validação
+
+Siftr aceita filtros fnmatch, sem `{ts,tsx}`. Use raiz estreita ou filtros repetidos
+`-g "*.ts" -g "*.tsx"`. O perfil pessoal do Pruner permanece fora do Git; ele precisa
+autorizar o histórico inteiro elegível. Smokes isolados usam Jev Browser oficial;
+suítes Playwright existentes continuam gates independentes. Ver
+[aceitação local](docs/local-adoption.md). Pruner reduz saída de comandos, não
+substitui a compactação de conversa do Codex.

@@ -30,3 +30,8 @@ Em 30/09/2026, v0.5.0: 45 testes do controlador e check de publicação passaram
 ## 2026-10-02 — Jeval 0.2.0
 
 87 testes do controlador passaram, incluindo nove do ciclo Jeval; check público e diff check passaram. Os 647 testes upstream passaram na adoção. Smoke do instalador usa CLI/version/demo em ambiente temporário; não repete a suíte de 647 testes em cada diagnóstico. Avaliação offline repetível valida acurácia/ECE do controle, concordância HTML/Markdown, recusa de bins inválidos e falta de labels. Teste OpenRouter gerou apenas casos sintéticos; seis skills habilitadas encontradas pelo app-server nativo. HOME limpo passou, sem provar execução Cloud. Veja docs/jeval.md e benchmarks/results/jeval-2026-10-02/.
+
+## Correções locais de adoção: 03/10/2026
+
+Ver [aceitação sintética reproduzível](local-adoption.md). Nenhum percentual
+de redução de stdout foi convertido em economia total de tokens ou cota Codex.

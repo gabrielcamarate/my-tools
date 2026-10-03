@@ -35,3 +35,15 @@ Após configurar, uma nova sessão pode ser necessária para atualizar o catálo
 ## Jeval
 
 `integrate jeval --apply` vincula as seis skills upstream, sem copiá-las no my-skills: `jeval-handoff`, `jeval-instrument-service`, `jeval-labels-harvest`, `jeval-calibration-audit`, `jeval-threshold-from-costs`, `jeval-drift-gate`. `gabriel-verification-planning` e `gabriel-loop-engineering` orientam quando medir decisões rotuladas. Não instrumentar serviços, coletar dados ou alterar gates por efeito de instalar a ferramenta. Use a instalação gerenciada existente; não execute o instalador flutuante mencionado pela skill upstream. Skills orientam uso; não garantem seleção automática de toda tarefa.
+
+## Correções de adoção local
+
+O My Skills usa `references/tool-routing.md` dentro de cada skill pertinente,
+ligado ao guia canônico. Isso evita caminhos inexistentes através dos links
+pessoais. Siftr não expande chaves em glob: use raiz estreita ou CLI com filtros
+repetidos. Sessões técnicas inteiramente elegíveis podem usar Pruner sob o perfil
+pessoal autorizado, sem pedir confirmação a cada comando; histórico com segredos,
+dados pessoais/de clientes ou financeiros continua excluído. O arquivo pessoal
+de política não é distribuído pelo Git nem herdado pelo Cloud.
+Smokes funcionais isolados chamam Jev Browser oficial; suítes versionadas e pixel
+diffs continuam gates. Cada entrega registra uso real ou dispensa concreta.

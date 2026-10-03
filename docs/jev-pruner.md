@@ -79,3 +79,14 @@ Benefício principal: menos logs repetitivos no contexto futuro do Codex, com re
 Uma sessão real nova do Codex CLI, com plugin isolado e dados sintéticos, invocou o wrapper e recebeu marcadores de poda; o hook criou o ponteiro de histórico automaticamente e os três valores pedidos foram preservados. O cliente pessoal também exibiu o hook `Plugin - jev-pruner@jev-pruner-codex`, matcher Bash, ativo e Trusted em `/hooks`. Essa inspeção não alterou outros hooks e não prova carregamento de uma sessão desktop já aberta.
 
 Bootstrap também passou em HOME/CODEX_HOME/My Tools storage novos e isolados: instalação, compilação, testes, cache e links das 23 skills, sem copiar chave pessoal. Comparação com Git upstream confirmou bytes idênticos em output.ts, jev.ts, secrets.ts, codex/history.ts, codex/context.ts e codex/hook.ts. É um teste local de preparação portátil, não uma tarefa Cloud.
+
+## Autorização local e limites
+
+No localhost, conferir as instruções pessoais e, se necessário,
+`~/.config/my-tools/usage-policy.json`. O perfil autoriza processamento técnico
+elegível, incluindo o histórico que o upstream envia. Não repetir confirmação
+por comando quando toda a sessão for elegível. Histórico com credenciais, registros
+pessoais/de clientes/financeiros ou logs privados operacionais exige dispensa
+concreta. Não substituir/sanear silenciosamente o histórico. A política pessoal
+fica fora do Git e não é automaticamente autorização Cloud.
+O Pruner não substitui a compactação nativa da conversa do Codex.
