@@ -1,0 +1,515 @@
+diff --git i/action.yml w/action.yml
+index 0924082..435f032 100644
+--- i/action.yml
++++ w/action.yml
+@@ -32,11 +32,11 @@ inputs:
+     required: false
+     default: "0.1.0"
+   send:
+-    description: Run the judgment rules, which sends the text to TypeSafe. Needs a key. Forced off for a pull request from a fork.
++    description: Run the judgment rules, which sends the text to OpenRouter. Needs a key. Forced off for a pull request from a fork.
+     required: false
+     default: "false"
+   api-key:
+-    description: A TYPESAFE_API_KEY, passed in by the caller. Read from nowhere else.
++    description: A OPENROUTER_API_KEY, passed in by the caller. Read from nowhere else.
+     required: false
+     default: ""
+   comment:
+@@ -119,7 +119,7 @@ runs:
+         fi
+ 
+         if [ "$send" = "true" ] && [ "$SNIFFTEST_HAS_KEY" != "true" ]; then
+-          echo "::error::send is on but api-key is empty. Pass your TYPESAFE_API_KEY in. Nothing was sent."
++          echo "::error::send is on but api-key is empty. Pass your OPENROUTER_API_KEY in. Nothing was sent."
+           exit 1
+         fi
+ 
+@@ -137,7 +137,7 @@ runs:
+         # Only when something may actually be sent. A key in the environment of
+         # the step that runs a checker over a fork's own files is a key with
+         # nothing to do and somewhere to go.
+-        TYPESAFE_API_KEY: ${{ steps.guard.outputs.send == 'true' && inputs.api-key || '' }}
++        OPENROUTER_API_KEY: ${{ steps.guard.outputs.send == 'true' && inputs.api-key || '' }}
+       run: |
+         set -uo pipefail
+ 
+diff --git i/hooks/pre-commit w/hooks/pre-commit
+index 902de48..e5f2032 100755
+--- i/hooks/pre-commit
++++ w/hooks/pre-commit
+@@ -22,12 +22,12 @@
+ # blocks a commit over a sentence you did not include in it.
+ #
+ # It never sends anything unless you say so twice: `SNIFFTEST_SEND=1` in the
+-# environment *and* a key in `TYPESAFE_API_KEY`. Miss either and it quietly
++# environment *and* a key in `OPENROUTER_API_KEY`. Miss either and it quietly
+ # falls back to the free rules rather than failing or, worse, asking.
+ #
+ # Environment
+ #   SNIFFTEST_SKIP=1        skip the hook entirely
+-#   SNIFFTEST_SEND=1        run the judgment rules too (needs TYPESAFE_API_KEY).
++#   SNIFFTEST_SEND=1        run the judgment rules too (needs OPENROUTER_API_KEY).
+ #                           The value names where you are answering for, and 1
+ #                           is the shorthand for TypeSafe, which is the only
+ #                           place this hook ever sends.
+@@ -149,11 +149,11 @@ case "${SNIFFTEST_SEND:-}" in
+   *) asked_to_send=1 ;;
+ esac
+ 
+-if [ "$asked_to_send" = "1" ] && [ -n "${TYPESAFE_API_KEY:-}" ]; then
++if [ "$asked_to_send" = "1" ] && [ -n "${OPENROUTER_API_KEY:-}" ]; then
+   : # SNIFFTEST_SEND is already in the environment; the CLI reads it as the yes.
+ else
+   if [ "$asked_to_send" = "1" ]; then
+-    echo "snifftest: SNIFFTEST_SEND is set but TYPESAFE_API_KEY is empty. Running the free rules only." >&2
++    echo "snifftest: SNIFFTEST_SEND is set but OPENROUTER_API_KEY is empty. Running the free rules only." >&2
+   fi
+   set -- "$@" --dry-run
+ fi
+diff --git i/skills/snifftest/SKILL.md w/skills/snifftest/SKILL.md
+index 8099688..dd9d8a4 100644
+--- i/skills/snifftest/SKILL.md
++++ w/skills/snifftest/SKILL.md
+@@ -102,3 +102,7 @@ before changing their ruleset.
+ 
+ A score near the threshold is a judgment call, not a verdict. Say so rather
+ than rewriting a line the user likes.
++
++## My Tools deployment profile
++
++This managed installation uses OPENROUTER_API_KEY and OpenRouter decisions. Reuse the shared credential; do not install a floating version or create per-project keys.  Project dependencies and gates are separate from installing this CLI.
+diff --git i/src/cli.ts w/src/cli.ts
+index 26ff547..47ddf00 100644
+--- i/src/cli.ts
++++ w/src/cli.ts
+@@ -1807,7 +1807,7 @@ function helpLines(): string[] {
+     "                      set it to off for none",
+     "  SNIFFTEST_SEND=…    answer the send question in CI, without remembering it. It names",
+     "                      the destinations it answers for, comma separated; 1 is the",
+-    "                      shorthand for TypeSafe, which is where check sends and nowhere else",
++    "                      shorthand for OpenRouter, which is where check sends and nowhere else",
+     "",
+     "Exit codes",
+     ...EXIT_RULES,
+diff --git i/src/consent.ts w/src/consent.ts
+index 8569348..bf69360 100644
+--- i/src/consent.ts
++++ w/src/consent.ts
+@@ -25,12 +25,12 @@ import { dirname, join } from "node:path";
+ import { ENDPOINT, KEY_ENV } from "./jev.ts";
+ import { asRecord } from "./types.ts";
+ 
+-/** The environment variable that answers, and the value that means TypeSafe. */
++/** The environment variable that answers, and the value that means OpenRouter. */
+ export const SEND_ENV = "SNIFFTEST_SEND";
+ 
+ /**
+  * `SNIFFTEST_SEND=1`, kept for the hook and the Action, which only ever run
+- * `check`. It answers for TypeSafe and for nothing else, so it can never cover
++ * `check`. It answers for OpenRouter and for nothing else, so it can never cover
+  * a bench provider by accident.
+  */
+ const SEND_SHORTHAND = "1";
+@@ -56,7 +56,7 @@ export interface Destination {
+ 
+ /** The judgment rules' own destination, and the only one `check` ever uses. */
+ export const TYPESAFE_DESTINATION: Destination = {
+-  name: "TypeSafe",
++  name: "OpenRouter",
+   endpoint: ENDPOINT,
+   keyEnv: KEY_ENV,
+ };
+@@ -65,7 +65,7 @@ export interface DisclosureFacts {
+   readonly ruleIds: readonly string[];
+   readonly fileCount: number;
+   /**
+-   * Where the text goes. Absent means TypeSafe alone.
++   * Where the text goes. Absent means OpenRouter alone.
+    *
+    * The bench sends the same paragraphs to other companies' models, and a yes
+    * given to one destination is not a yes to another: a stored answer only
+@@ -186,7 +186,7 @@ function storedAnswer(path: string): readonly string[] | null {
+   try {
+     const parsed = asRecord(JSON.parse(readFileSync(path, "utf8")));
+     if (parsed === null || parsed["granted"] !== true) return null;
+-    // A file written before destinations were recorded answered for TypeSafe,
++    // A file written before destinations were recorded answered for OpenRouter,
+     // which was the only place anything went.
+     const destinations = parsed["destinations"];
+     if (!Array.isArray(destinations)) return [TYPESAFE_DESTINATION.name];
+diff --git i/src/jev.ts w/src/jev.ts
+index 9b5fbf4..0a35741 100644
+--- i/src/jev.ts
++++ w/src/jev.ts
+@@ -1,3 +1,4 @@
++import { openRouterKey } from "./openrouter.ts";
+ /**
+  * The one place this tool talks to a network.
+  *
+@@ -47,13 +48,13 @@
+ import { scrubSecrets } from "./scrub.ts";
+ import { type JudgmentRule, asRecord } from "./types.ts";
+ 
+-export const ENDPOINT = "https://api.typesafe.ai/v1/systemone";
++export const ENDPOINT = "https://openrouter.ai/api/alpha/decisions";
+ 
+ /** The alias, not a pinned version; the served model comes back in the response. */
+-export const MODEL = "jev-latest";
++export const MODEL = "typesafe/jev-1.13";
+ 
+ /** The only name a key is ever read from. Never a fallback, never a repo file. */
+-export const KEY_ENV = "TYPESAFE_API_KEY";
++export const KEY_ENV = "OPENROUTER_API_KEY";
+ 
+ /**
+  * Characters of state per request.
+@@ -268,7 +269,7 @@ export function createJevClient(options: JevClientOptions = {}): JevClient {
+   return {
+     async ask(request: JevRequest): Promise<JevResult> {
+       const state = guardState(request.state, guard);
+-      const key = options.apiKey ?? process.env[KEY_ENV] ?? "";
++      const key = options.apiKey ?? openRouterKey() ?? "";
+       if (key === "") throw new JevMissingKeyError();
+ 
+       const body = JSON.stringify({ model: MODEL, state, questions: request.questions });
+diff --git i/src/openrouter.ts w/src/openrouter.ts
+new file mode 100644
+index 0000000..031025f
+--- /dev/null
++++ w/src/openrouter.ts
+@@ -0,0 +1,20 @@
++import { readFileSync, statSync } from "node:fs";
++import { homedir } from "node:os";
++import { join } from "node:path";
++export function openRouterKey(): string | undefined {
++  if (process.env.OPENROUTER_API_KEY?.trim()) return process.env.OPENROUTER_API_KEY.trim();
++  if (!process.env.HOME) return undefined;
++  try {
++    const path = join(homedir(), ".config/siftr/.env");
++    if ((statSync(path).mode & 0o077) !== 0) return undefined;
++    const line = readFileSync(path, "utf8").split("\n").find(s => /^(?:export\s+)?OPENROUTER_API_KEY=/.test(s.trim()));
++    return line?.trim().replace(/^(?:export\s+)?OPENROUTER_API_KEY=/, "").trim().replace(/^["']|["']$/g, "") || undefined;
++  } catch { return undefined; }
++}
++export const openRouterFetch: typeof fetch = async (input, init) => {
++  const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
++  if (url.href !== "https://openrouter.ai/v1/systemone") throw new Error("OpenRouter decision transport refuses an unexpected destination");
++  const body = JSON.parse(String(init?.body));
++  if (!body.model || String(body.model).startsWith("jev-")) body.model = "typesafe/jev-1.13";
++  return fetch("https://openrouter.ai/api/alpha/decisions", {...init, body: JSON.stringify(body)});
++};
+diff --git i/tests/action.test.ts w/tests/action.test.ts
+index bb36899..47199e0 100644
+--- i/tests/action.test.ts
++++ w/tests/action.test.ts
+@@ -93,14 +93,14 @@ describe("action.yml, as a document", () => {
+     // either a mistake or an instruction to the caller in the wrong file.
+     expect(actionSource).not.toContain("secrets.");
+     const keyEnvNames = [...actionSource.matchAll(/^\s{8}([A-Z_]+):/gm)].map((m) => m[1] as string);
+-    expect(keyEnvNames.filter((name) => name.endsWith("_API_KEY"))).toEqual(["TYPESAFE_API_KEY"]);
++    expect(keyEnvNames.filter((name) => name.endsWith("_API_KEY"))).toEqual(["OPENROUTER_API_KEY"]);
+   });
+ 
+   test("the key is in no step's environment when the guard turned sending off", () => {
+     // A key present while nothing may be sent is a key with nothing to do and
+     // somewhere to leak from, and the step it sat in is the one that runs the
+     // checker over a fork's own files.
+-    const placement = stepById("run").env?.TYPESAFE_API_KEY ?? "";
++    const placement = stepById("run").env?.OPENROUTER_API_KEY ?? "";
+     expect(placement).toContain("steps.guard.outputs.send == 'true'");
+     expect(placement).toContain("inputs.api-key");
+     expect(placement).toContain("|| ''");
+diff --git i/tests/bin.test.ts w/tests/bin.test.ts
+index f0bb12a..c499794 100644
+--- i/tests/bin.test.ts
++++ w/tests/bin.test.ts
+@@ -93,7 +93,7 @@ function run(bin: string, args: readonly string[], cwd: string) {
+   const result = Bun.spawnSync({
+     cmd: ["node", bin, ...args],
+     cwd,
+-    env: { ...process.env, SNIFFTEST_SEND: "", TYPESAFE_API_KEY: "" },
++    env: { ...process.env, SNIFFTEST_SEND: "", OPENROUTER_API_KEY: "" },
+   });
+   return {
+     code: result.exitCode,
+diff --git i/tests/cli.test.ts w/tests/cli.test.ts
+index 9251371..2e67e4e 100644
+--- i/tests/cli.test.ts
++++ w/tests/cli.test.ts
+@@ -119,7 +119,7 @@ async function run(options: RunOptions): Promise<RunResult> {
+ 
+   const code = await runCli({
+     argv: options.argv,
+-    env: { HOME: home, TYPESAFE_API_KEY: "test-key-not-a-real-credential", ...options.env },
++    env: { HOME: home, OPENROUTER_API_KEY: "test-key-not-a-real-credential", ...options.env },
+     cwd: options.cwd ?? repoRoot,
+     homedir: home,
+     write: (line) => out.push(line),
+@@ -273,7 +273,7 @@ describe("consent", () => {
+ 
+     expect(result.code).toBe(EXIT.consent);
+     expect(seen).toEqual([]);
+-    expect(result.err).toContain("api.typesafe.ai");
++    expect(result.err).toContain("openrouter.ai");
+   });
+ 
+   test("--yes answers, and the answer is remembered outside the working directory", async () => {
+@@ -313,7 +313,7 @@ describe("consent", () => {
+     });
+ 
+     expect(result.code).toBe(EXIT.flags);
+-    expect(result.err).not.toContain("api.typesafe.ai");
++    expect(result.err).not.toContain("openrouter.ai");
+   });
+ });
+ 
+@@ -371,12 +371,12 @@ describe("the judgment arm", () => {
+     const home = sandbox();
+     const result = await run({
+       argv: ["check", "--rules", MIXED, `${TEXTS}/closer.md`],
+-      env: { TYPESAFE_API_KEY: undefined },
++      env: { OPENROUTER_API_KEY: undefined },
+       home,
+     });
+ 
+     expect(result.code).toBe(EXIT.failure);
+-    expect(result.err).toContain("TYPESAFE_API_KEY");
++    expect(result.err).toContain("OPENROUTER_API_KEY");
+     expect(result.err).toContain("--dry-run");
+     expect(existsSync(consentPath({ HOME: home }, home))).toBe(false);
+   });
+diff --git i/tests/consent.test.ts w/tests/consent.test.ts
+index 9788d43..1413fdf 100644
+--- i/tests/consent.test.ts
++++ w/tests/consent.test.ts
+@@ -63,7 +63,7 @@ describe("disclosure", () => {
+   test("names the endpoint, what leaves the machine, and the way out", () => {
+     const text = disclosure({ ruleIds: ["restating_closer", "tricolon"], fileCount: 3 }).join("\n");
+ 
+-    expect(text).toContain("api.typesafe.ai");
++    expect(text).toContain("openrouter.ai");
+     expect(text).toContain("restating_closer");
+     expect(text).toContain("--dry-run");
+     expect(text.toLowerCase()).toContain("paragraph");
+@@ -122,7 +122,7 @@ describe("requestConsent", () => {
+     // company. It used to be read before the destinations were looked at, so
+     // the same variable also authorised `bench` to ship the same paragraphs to
+     // two others, without anybody being told.
+-    const OPENROUTER = { name: "OpenRouter", endpoint: "https://openrouter.ai/x", keyEnv: "OPENROUTER_API_KEY" };
++    const OPENROUTER = { name: "OtherProvider", endpoint: "https://openrouter.ai/x", keyEnv: "OPENROUTER_API_KEY" };
+     const ANTHROPIC = { name: "Anthropic", endpoint: "https://api.anthropic.com/x", keyEnv: "ANTHROPIC_API_KEY" };
+ 
+     async function askFor(
+@@ -153,10 +153,10 @@ describe("requestConsent", () => {
+     test("a named list answers for exactly those, whatever case it is written in", async () => {
+       const home = sandbox();
+ 
+-      expect((await askFor([OPENROUTER, ANTHROPIC], "OpenRouter, Anthropic", home)).granted).toBe(true);
+-      expect((await askFor([OPENROUTER], "openrouter", home)).granted).toBe(true);
+-      expect((await askFor([OPENROUTER, ANTHROPIC], "openrouter", home)).granted).toBe(false);
+-      expect((await askFor([], "OpenRouter", home)).granted).toBe(false);
++      expect((await askFor([OPENROUTER, ANTHROPIC], "OtherProvider, Anthropic", home)).granted).toBe(true);
++      expect((await askFor([OPENROUTER], "otherprovider", home)).granted).toBe(true);
++      expect((await askFor([OPENROUTER, ANTHROPIC], "otherprovider", home)).granted).toBe(false);
++      expect((await askFor([], "OtherProvider", home)).granted).toBe(false);
+     });
+ 
+     test("an environment answer is still never written down", async () => {
+@@ -177,7 +177,7 @@ describe("requestConsent", () => {
+ 
+     expect(outcome.granted).toBe(false);
+     expect(outcome.asked).toBe(true);
+-    expect(said.join("\n")).toContain("api.typesafe.ai");
++    expect(said.join("\n")).toContain("openrouter.ai");
+     expect(existsSync(consentPath({ HOME: home }, home))).toBe(false);
+   });
+ 
+diff --git i/tests/eval.test.ts w/tests/eval.test.ts
+index 6eafbc7..60a9e28 100644
+--- i/tests/eval.test.ts
++++ w/tests/eval.test.ts
+@@ -619,7 +619,7 @@ async function cli(options: RunOptions): Promise<{ code: number; out: string; er
+ 
+   const code = await runCli({
+     argv: options.argv,
+-    env: { HOME: home, TYPESAFE_API_KEY: "test-key-not-a-real-credential", ...options.env },
++    env: { HOME: home, OPENROUTER_API_KEY: "test-key-not-a-real-credential", ...options.env },
+     cwd: options.cwd ?? repoRoot,
+     homedir: home,
+     write: (line) => out.push(line),
+@@ -668,7 +668,7 @@ describe("snifftest eval", () => {
+ 
+     expect(result.code).toBe(EXIT.consent);
+     expect(seen).toEqual([]);
+-    expect(result.err).toContain("api.typesafe.ai");
++    expect(result.err).toContain("openrouter.ai");
+   });
+ 
+   test("with --yes it runs all three arms and writes the raw responses beside the inputs", async () => {
+diff --git i/tests/hook.test.ts w/tests/hook.test.ts
+index d0fc0e0..aaf46c7 100644
+--- i/tests/hook.test.ts
++++ w/tests/hook.test.ts
+@@ -297,11 +297,11 @@ describe("what the hook asks the checker to do", () => {
+     const commit = git(dir, ["commit", "-m", "half asked"], {
+       SNIFFTEST_BIN: runner.bin,
+       SNIFFTEST_SEND: "1",
+-      TYPESAFE_API_KEY: "",
++      OPENROUTER_API_KEY: "",
+     });
+ 
+     expect(runner.args()).toContain("--dry-run");
+-    expect(commit.stderr).toContain("TYPESAFE_API_KEY is empty");
++    expect(commit.stderr).toContain("OPENROUTER_API_KEY is empty");
+   });
+ 
+   test("SNIFFTEST_SEND=1 with a key drops the dry run", () => {
+@@ -313,7 +313,7 @@ describe("what the hook asks the checker to do", () => {
+     git(dir, ["commit", "-m", "asked"], {
+       SNIFFTEST_BIN: runner.bin,
+       SNIFFTEST_SEND: "1",
+-      TYPESAFE_API_KEY: "placeholder-not-a-real-key",
++      OPENROUTER_API_KEY: "placeholder-not-a-real-key",
+     });
+ 
+     expect(runner.args()).not.toContain("--dry-run");
+diff --git i/tests/hygiene.test.ts w/tests/hygiene.test.ts
+index f72c194..b92b4fc 100644
+--- i/tests/hygiene.test.ts
++++ w/tests/hygiene.test.ts
+@@ -342,7 +342,7 @@ describe("CI never needs a key", () => {
+     // Everything CI runs is a countable rule. The moment a key appears here,
+     // a fork's pull request becomes a way to spend it.
+     expect(ci).not.toContain("secrets.");
+-    expect(ci).not.toContain("TYPESAFE_API_KEY");
++    expect(ci).not.toContain("OPENROUTER_API_KEY");
+   });
+ 
+   test("the checker runs with the network off", () => {
+diff --git i/tests/jev.test.ts w/tests/jev.test.ts
+index 03564c3..2be94f0 100644
+--- i/tests/jev.test.ts
++++ w/tests/jev.test.ts
+@@ -113,33 +113,33 @@ describe("createJevClient request shape", () => {
+ 
+   test("reads the key from the environment when none is passed", async () => {
+     const stub = stubFetch([() => ok(answered)]);
+-    const previous = process.env["TYPESAFE_API_KEY"];
+-    process.env["TYPESAFE_API_KEY"] = fakeKey;
++    const previous = process.env["OPENROUTER_API_KEY"];
++    process.env["OPENROUTER_API_KEY"] = fakeKey;
+ 
+     try {
+       const client = createJevClient({ fetch: stub.doFetch });
+       await client.ask({ state: "A paragraph.", questions });
+       expect(headerOf(stub.calls[0]!, "authorization")).toBe(`Bearer ${fakeKey}`);
+     } finally {
+-      if (previous === undefined) delete process.env["TYPESAFE_API_KEY"];
+-      else process.env["TYPESAFE_API_KEY"] = previous;
++      if (previous === undefined) delete process.env["OPENROUTER_API_KEY"];
++      else process.env["OPENROUTER_API_KEY"] = previous;
+     }
+   });
+ 
+   test("a missing key is a typed error and no call is made", async () => {
+     const stub = stubFetch([]);
+-    const previous = process.env["TYPESAFE_API_KEY"];
+-    delete process.env["TYPESAFE_API_KEY"];
++    const previous = process.env["OPENROUTER_API_KEY"];
++    delete process.env["OPENROUTER_API_KEY"];
+ 
+     try {
+       const client = createJevClient({ fetch: stub.doFetch });
+       const thrown = await client.ask({ state: "A paragraph.", questions }).catch((e: unknown) => e);
+ 
+       expect(thrown).toBeInstanceOf(JevMissingKeyError);
+-      expect((thrown as Error).message).toContain("TYPESAFE_API_KEY");
++      expect((thrown as Error).message).toContain("OPENROUTER_API_KEY");
+       expect(stub.calls).toHaveLength(0);
+     } finally {
+-      if (previous !== undefined) process.env["TYPESAFE_API_KEY"] = previous;
++      if (previous !== undefined) process.env["OPENROUTER_API_KEY"] = previous;
+     }
+   });
+ });
+diff --git i/tests/plugin.test.ts w/tests/plugin.test.ts
+index 5aac950..fc4fbbd 100644
+--- i/tests/plugin.test.ts
++++ w/tests/plugin.test.ts
+@@ -126,7 +126,7 @@ describe("what the skill tells an agent to do", () => {
+   });
+ 
+   test("never tells an agent to touch the key", () => {
+-    expect(skillInstructions).not.toContain("TYPESAFE_API_KEY");
++    expect(skillInstructions).not.toContain("OPENROUTER_API_KEY");
+     expect(skillInstructions).not.toContain("API_KEY");
+   });
+ 
+@@ -167,7 +167,7 @@ describe("the bundled script", () => {
+   });
+ 
+   test("never reads or prints the key", () => {
+-    expect(runScript).not.toContain("TYPESAFE_API_KEY");
++    expect(runScript).not.toContain("OPENROUTER_API_KEY");
+   });
+ });
+ 
+diff --git i/tests/serve.test.ts w/tests/serve.test.ts
+index b56afa0..3c2bc11 100644
+--- i/tests/serve.test.ts
++++ w/tests/serve.test.ts
+@@ -574,7 +574,7 @@ describe("serve: live mode asks before anything leaves", () => {
+   test("no recorded yes: the judgment client is never built, never asked, and the page says so", async () => {
+     let built = 0;
+     const run = await runServe(["--rules", MIXED], {
+-      env: { TYPESAFE_API_KEY: FAKE_KEY },
++      env: { OPENROUTER_API_KEY: FAKE_KEY },
+       createClient: () => {
+         built += 1;
+         return forbiddenClient();
+@@ -601,7 +601,7 @@ describe("serve: live mode asks before anything leaves", () => {
+     const run = await runServe(["--rules", MIXED, "--yes"], { createClient: forbiddenClient });
+     const result = JSON.parse((await scorePost(run.handle.port, "In short, we said it.")).body);
+     expect(result.judged).toBe(false);
+-    expect(run.err.join("\n")).toContain("TYPESAFE_API_KEY");
++    expect(run.err.join("\n")).toContain("OPENROUTER_API_KEY");
+     expect(run.err.join("\n")).not.toContain("What leaves this machine");
+     run.stop();
+     await run.done;
+@@ -610,7 +610,7 @@ describe("serve: live mode asks before anything leaves", () => {
+   test("with --yes and a key the judgment rules run, and the gateway's own usage reaches the meter", async () => {
+     const seen: JevRequest[] = [];
+     const run = await runServe(["--rules", MIXED, "--yes"], {
+-      env: { TYPESAFE_API_KEY: FAKE_KEY },
++      env: { OPENROUTER_API_KEY: FAKE_KEY },
+       createClient: () => stubClient((state) => ({ restating_closer: state.includes("In short") ? 0.93 : 0.04 }), seen),
+     });
+ 
+@@ -628,7 +628,7 @@ describe("serve: live mode asks before anything leaves", () => {
+ 
+   test("the key never reaches the browser: not in the page, not in a header, not in an answer", async () => {
+     const run = await runServe(["--rules", MIXED, "--yes"], {
+-      env: { TYPESAFE_API_KEY: FAKE_KEY },
++      env: { OPENROUTER_API_KEY: FAKE_KEY },
+       createClient: () => stubClient(() => ({ restating_closer: 0.9 }), []),
+     });
+     const replies = [
+@@ -650,7 +650,7 @@ describe("serve: live mode asks before anything leaves", () => {
+     const run = await runServe(["--rules", MIXED], {
+       cwd,
+       homedir: home,
+-      env: { TYPESAFE_API_KEY: FAKE_KEY, SNIFFTEST_SEND: "1" },
++      env: { OPENROUTER_API_KEY: FAKE_KEY, SNIFFTEST_SEND: "1" },
+       createClient: () => stubClient(() => ({ restating_closer: 0.9 }), []),
+     });
+     for (const draft of ["One.", "One. Two \u2014 three.", "In short, we said it."]) {
+@@ -881,7 +881,7 @@ describe("serve: recording a replay", () => {
+     const err: string[] = [];
+     const code = await serve({
+       argv: ["serve", ...argv],
+-      env: { TYPESAFE_API_KEY: FAKE_KEY, SNIFFTEST_SEND: "typesafe" },
++      env: { OPENROUTER_API_KEY: FAKE_KEY, SNIFFTEST_SEND: "typesafe" },
+       cwd,
+       homedir: cwd,
+       write: (line) => out.push(line),

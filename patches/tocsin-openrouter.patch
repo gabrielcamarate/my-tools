@@ -1,0 +1,110 @@
+diff --git i/src/jev.rs w/src/jev.rs
+index 2cb59ea..8d500d8 100644
+--- i/src/jev.rs
++++ w/src/jev.rs
+@@ -8,7 +8,7 @@ use serde_json::{Value, json};
+ 
+ use crate::judge::{Judge, Judged, Verdict};
+ 
+-pub const DEFAULT_ENDPOINT: &str = "https://api.typesafe.ai";
++pub const DEFAULT_ENDPOINT: &str = "https://openrouter.ai";
+ pub const DEFAULT_POLICY: &str = include_str!("../policies/default.json");
+ const MAX_ATTEMPTS: u32 = 6;
+ 
+@@ -80,7 +80,7 @@ impl Jev {
+     pub fn new(api_key: String, model: String, endpoint: &str, policy: &str) -> Self {
+         Self {
+             http: crate::http_client(),
+-            url: format!("{}/v1/systemone", endpoint.trim_end_matches('/')),
++            url: format!("{}/api/alpha/decisions", endpoint.trim_end_matches('/')),
+             api_key,
+             model,
+             policy: serde_json::from_str(policy)
+diff --git i/src/main.rs w/src/main.rs
+index 444db0b..51e2055 100644
+--- i/src/main.rs
++++ w/src/main.rs
+@@ -38,7 +38,7 @@ struct Common {
+     /// TypeSafe API key. Environment only, so it stays out of the process list.
+     #[arg(
+         long,
+-        env = "TYPESAFE_API_KEY",
++        env = "OPENROUTER_API_KEY",
+         hide = true,
+         hide_env_values = true,
+         global = true
+@@ -48,7 +48,7 @@ struct Common {
+     #[arg(
+         long,
+         env = "TOCSIN_MODEL",
+-        default_value = "jev-latest",
++        default_value = "typesafe/jev-1.13",
+         global = true
+     )]
+     model: String,
+@@ -137,7 +137,9 @@ async fn dispatch(cli: Cli) -> anyhow::Result<()> {
+         .common
+         .api_key
+         .clone()
+-        .context("set TYPESAFE_API_KEY, or pass --offline to use keyword rules")?;
++        .or_else(shared_openrouter_key)
++        .clone()
++        .context("set OPENROUTER_API_KEY, or pass --offline to use keyword rules")?;
+     let policy = match &cli.common.policy {
+         Some(path) => std::fs::read_to_string(path)
+             .with_context(|| format!("reading policy {}", path.display()))?,
+@@ -257,3 +259,19 @@ fn read_lines(
+         }
+     }
+ }
++
++fn shared_openrouter_key() -> Option<String> {
++    let path = std::path::PathBuf::from(std::env::var("HOME").ok()?).join(".config/siftr/.env");
++    #[cfg(unix)]
++    {
++        use std::os::unix::fs::PermissionsExt;
++        if std::fs::metadata(&path).ok()?.permissions().mode() & 0o077 != 0 { return None; }
++    }
++    for line in std::fs::read_to_string(path).ok()?.lines() {
++        let line = line.trim().strip_prefix("export ").unwrap_or(line.trim());
++        if let Some(value) = line.strip_prefix("OPENROUTER_API_KEY=") {
++            return Some(value.trim().trim_matches(|c| c == '\'' || c == '"').to_string());
++        }
++    }
++    None
++}
+diff --git i/tests/cli.rs w/tests/cli.rs
+index cd3ed3a..83bc4b8 100644
+--- i/tests/cli.rs
++++ w/tests/cli.rs
+@@ -5,7 +5,7 @@ use serde_json::Value;
+ 
+ fn tocsin() -> Command {
+     let mut command = Command::new(env!("CARGO_BIN_EXE_tocsin"));
+-    command.env_remove("TYPESAFE_API_KEY");
++    command.env_remove("OPENROUTER_API_KEY");
+     command
+ }
+ 
+@@ -44,7 +44,7 @@ fn triage_prints_routed_json_lines() {
+ fn requires_an_api_key_unless_offline() {
+     let output = tocsin().args(["triage", "/dev/null"]).output().unwrap();
+     assert!(!output.status.success());
+-    assert!(String::from_utf8_lossy(&output.stderr).contains("TYPESAFE_API_KEY"));
++    assert!(String::from_utf8_lossy(&output.stderr).contains("OPENROUTER_API_KEY"));
+ }
+ 
+ #[test]
+diff --git i/tests/jev.rs w/tests/jev.rs
+index 2ed4b9a..ec07c4e 100644
+--- i/tests/jev.rs
++++ w/tests/jev.rs
+@@ -14,7 +14,7 @@ async fn mock(respond: fn(usize) -> Response) -> (String, Arc<AtomicUsize>) {
+     let hits = Arc::new(AtomicUsize::new(0));
+     let counter = hits.clone();
+     let app = Router::new().route(
+-        "/v1/systemone",
++        "/api/alpha/decisions",
+         post(move |headers: HeaderMap, Json(body): Json<Value>| {
+             let counter = counter.clone();
+             async move {

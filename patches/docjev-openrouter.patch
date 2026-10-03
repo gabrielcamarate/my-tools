@@ -1,0 +1,193 @@
+diff --git i/src/jev_docs/doctor.py w/src/jev_docs/doctor.py
+index cdc9f88..6494e80 100644
+--- i/src/jev_docs/doctor.py
++++ w/src/jev_docs/doctor.py
+@@ -10,6 +10,7 @@ import tempfile
+ from pathlib import Path
+ from typing import Any
+ 
++from .engines.openrouter import openrouter_key
+ from .conversion import converter_version, find_soffice
+ 
+ 
+@@ -31,13 +32,14 @@ def doctor(*, smoke: bool = False) -> dict[str, Any]:
+     diagnostics: dict[str, Any] = {
+         "python": platform.python_version(), "platform": platform.system(), "packages": packages,
+         "credentials": {name: bool(os.environ.get(name)) for name in
+-                        ("TYPESAFE_API_KEY", "LLAMA_CLOUD_API_KEY", "OPENAI_API_KEY")},
++                        ("OPENROUTER_API_KEY", "LLAMA_CLOUD_API_KEY", "OPENAI_API_KEY")},
+         "tools": {"libreoffice": {"available": bool(office), "version": office_version},
+                   "fontconfig": {"available": bool(shutil.which("fc-list"))}},
+         "formats": {"pdf": bool(packages["liteparse"]), "docx": bool(office), "pptx": bool(office)},
+         "local_ocr": {"status": "not_exercised", "note": "Use doctor --smoke to test scanned OCR. Initial OCR may download English language data."},
+         "cloud_authentication": "not_tested",
+     }
++    diagnostics["credentials"]["OPENROUTER_API_KEY"] = bool(openrouter_key())
+     if smoke:
+         diagnostics["local_ocr"] = _smoke()
+     return diagnostics
+diff --git i/src/jev_docs/engines/jev.py w/src/jev_docs/engines/jev.py
+index 18e61c5..6269b47 100644
+--- i/src/jev_docs/engines/jev.py
++++ w/src/jev_docs/engines/jev.py
+@@ -7,6 +7,7 @@ import os
+ import time
+ from typing import Any
+ 
++from .openrouter import OpenRouterTransport, openrouter_key
+ from typesafe_sdk import AsyncTypeSafeClient, Choice, Noul, RetryPolicy
+ 
+ from ..errors import ContextLimitError, DocumentError, ProviderError
+@@ -26,7 +27,7 @@ class JevEngine:
+ 
+     def __init__(
+         self,
+-        model: str = "jev-1.13.0",
++        model: str = "typesafe/jev-1.13",
+         *,
+         api_key: str | None = None,
+         timeout: float = 30,
+@@ -34,16 +35,17 @@ class JevEngine:
+         window_size: int = 8,
+         context_recovery: bool = True,
+     ):
+-        if not (api_key or os.getenv("TYPESAFE_API_KEY")):
++        if not (api_key or openrouter_key()):
+             raise ProviderError(
+-                "Set TYPESAFE_API_KEY to use Jev. Get access at console.typesafe.ai."
++                "Set OPENROUTER_API_KEY to use Jev. Get access at console.typesafe.ai."
+             )
++        model = "typesafe/jev-1.13" if model.startswith("jev-") else model
+         self.model = model
+         self.max_retries = max_retries
+         self.window_size = window_size
+         self.context_recovery = context_recovery
+         self.client = AsyncTypeSafeClient(
+-            api_key=api_key, model=model, timeout=timeout, retry=RetryPolicy(max_retries=0)
++            api_key=api_key or openrouter_key(), model=model, timeout=timeout, retry=RetryPolicy(max_retries=0), base_url="https://openrouter.ai", transport=OpenRouterTransport()
+         )
+ 
+     async def aclose(self) -> None:
+diff --git i/src/jev_docs/engines/openrouter.py w/src/jev_docs/engines/openrouter.py
+new file mode 100644
+index 0000000..3a9cf60
+--- /dev/null
++++ w/src/jev_docs/engines/openrouter.py
+@@ -0,0 +1,31 @@
++import httpx2
++
++class OpenRouterTransport(httpx2.AsyncHTTPTransport):
++    async def handle_async_request(self, request):
++        if str(request.url) != "https://openrouter.ai/v1/systemone":
++            raise ValueError("Unexpected OpenRouter decision destination")
++        request.url = httpx2.URL("https://openrouter.ai/api/alpha/decisions")
++        return await super().handle_async_request(request)
++
++import os
++from pathlib import Path
++import shlex
++
++def openrouter_key():
++    if os.environ.get("OPENROUTER_API_KEY", "").strip():
++        return os.environ["OPENROUTER_API_KEY"].strip()
++    path = Path.home() / ".config/siftr/.env"
++    if not os.environ.get("HOME"):
++        return None
++    try:
++        if path.stat().st_mode & 0o077:
++            return None
++        for line in path.read_text().splitlines():
++            line = line.strip().removeprefix("export ")
++            if line.startswith("OPENROUTER_API_KEY="):
++                values = shlex.split(line.split("=", 1)[1], comments=True)
++                if len(values) == 1:
++                    return values[0]
++    except (OSError, ValueError):
++        pass
++    return None
+diff --git i/src/jev_docs/web/app.py w/src/jev_docs/web/app.py
+index b2606c7..517956b 100644
+--- i/src/jev_docs/web/app.py
++++ w/src/jev_docs/web/app.py
+@@ -351,7 +351,7 @@ def create_app(project_dir: str | Path | None = None, run_dir: str | Path | None
+             "samples": [{k: v for k, v in item.items() if k != "path"} for item in samples.values()],
+             "rules": {task: _rules(root, task, demo_set) for task in ("classify", "split")},
+             "demo_set": {"id": demo_set, "label": "Original public documents" if demo_set == "real" else "Synthetic test fixtures"},
+-            "providers": {"jev": bool(os.environ.get("TYPESAFE_API_KEY")),
++            "providers": {"jev": bool(os.environ.get("OPENROUTER_API_KEY")),
+                           "openai": bool(os.environ.get("OPENAI_API_KEY")),
+                           "llamaparse": bool(os.environ.get("LLAMA_CLOUD_API_KEY"))},
+         }
+diff --git i/tests/test_benchmark_report.py w/tests/test_benchmark_report.py
+index 435f451..bf90518 100644
+--- i/tests/test_benchmark_report.py
++++ w/tests/test_benchmark_report.py
+@@ -52,7 +52,7 @@ def study(tmp_path):
+ 
+ def test_real_study_report_counts_and_accounting_are_reproducible(study, monkeypatch):
+     path, _, _, save = study
+-    monkeypatch.delenv('TYPESAFE_API_KEY', raising=False)
++    monkeypatch.delenv('OPENROUTER_API_KEY', raising=False)
+     monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+     summary = save()
+     before = {name: (path / name).read_bytes() for name in ('summary.json', 'metrics.csv', 'report.md', 'latency.svg')}
+diff --git i/tests/test_cli.py w/tests/test_cli.py
+index 0bc16ff..41a93ec 100644
+--- i/tests/test_cli.py
++++ w/tests/test_cli.py
+@@ -14,11 +14,11 @@ def test_help_has_tasks():
+ 
+ 
+ def test_doctor_only_reports_key_presence(monkeypatch):
+-    monkeypatch.setenv("TYPESAFE_API_KEY", "do-not-print-this-secret")
++    monkeypatch.setenv("OPENROUTER_API_KEY", "do-not-print-this-secret")
+     result = runner.invoke(app, ["doctor"])
+     assert result.exit_code == 0
+     assert "do-not-print-this-secret" not in result.stdout
+-    assert json.loads(result.stdout)["credentials"]["TYPESAFE_API_KEY"] is True
++    assert json.loads(result.stdout)["credentials"]["OPENROUTER_API_KEY"] is True
+ 
+ 
+ def test_missing_rules_actionable(tmp_path):
+diff --git i/tests/test_split.py w/tests/test_split.py
+index e9d770e..bff6a7a 100644
+--- i/tests/test_split.py
++++ w/tests/test_split.py
+@@ -91,7 +91,7 @@ def test_preflight_is_pure_and_refines_the_same_local_windows(document, rules, m
+         pytest.fail("Pure preflight constructed a client")
+ 
+     monkeypatch.setattr(jev, "AsyncTypeSafeClient", forbidden)
+-    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
++    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+     for page in document.pages:
+         page.text = "x" * 30_000
+diff --git i/tests/test_web.py w/tests/test_web.py
+index abafa12..22f68b5 100644
+--- i/tests/test_web.py
++++ w/tests/test_web.py
+@@ -160,7 +160,7 @@ async def test_split_exports_follow_manifest_ids_not_filename_sort(setup_demo, m
+ @pytest.mark.asyncio
+ async def test_local_origin_guard_and_private_samples(setup_demo, monkeypatch):
+     app, _, calls = setup_demo
+-    monkeypatch.setenv("TYPESAFE_API_KEY", "DO_NOT_EXPOSE_THIS_VALUE")
++    monkeypatch.setenv("OPENROUTER_API_KEY", "DO_NOT_EXPOSE_THIS_VALUE")
+     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://localhost") as client:
+         sample_response = await client.get("/api/samples")
+         assert "SECRET_LABEL" not in sample_response.text
+@@ -210,13 +210,13 @@ async def test_actionable_library_errors_and_static_assets(setup_demo, monkeypat
+     app, _, _ = setup_demo
+ 
+     async def fail(*args, **kwargs):
+-        raise ProviderError("Set TYPESAFE_API_KEY to run Jev.")
++        raise ProviderError("Set OPENROUTER_API_KEY to run Jev.")
+ 
+     monkeypatch.setattr(web, "classify_document", fail)
+     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://localhost") as client:
+         response = await client.post("/api/runs", data={"task": "classify", "rules": json.dumps(RULES), "sample_id": "invoice"})
+         run = await finish(client, response.json()["id"])
+-        assert run["error"] == "Set TYPESAFE_API_KEY to run Jev."
++        assert run["error"] == "Set OPENROUTER_API_KEY to run Jev."
+         assert (await client.get("/")).status_code == 200
+         assert (await client.get("/static/app.js")).status_code == 200
+         assert (await client.get("/static/assets/brand/fonts/OverusedGrotesk-Regular.ttf")).status_code == 200

@@ -55,12 +55,10 @@ Reaplique integrate nas instalações antigas: o registro antigo é compatível,
 Conflitos externos abortam antes de trocar qualquer link; falhas compensam a troca.
 Após configurar, uma nova sessão pode ser necessária para atualizar o catálogo.
 
-## Canny
-
-`canny-source-v1` obtém o SHA aceito e aplica patch de provedor com allowlist. Verifica o contrato antes de executar scripts, instala devDependencies com lock e scripts de instalação desativados, compila e registra hashes de fonte/dist/patch. O runtime oficial não tem dependências externas. Smoke checks usam HOME/TMPDIR isolados e chave vazia. O pacote pnpm 12.4.1 também é fixado.
-
-`commands.json` registra somente `command/active` para Canny, sem inventar skill/MCP. Preflight preserva comandos externos; update/rollback e falhas de persistência restauram link/registro/estado. `integrate` não toca hooks. O opt-in `canny init --codex` é feito no projeto consumidor, preservando entradas de outros hooks; a confiança pertence ao cliente e precisa de revisão separada. `doctor` não comprova ativação ou confiança: informa essa pendência explicitamente.
-
 ## Jeval
 
 `jeval-source-v1` verifica SHA, contrato e hashes da fonte intacta; smoke gera um relatório demo num runtime temporário. `integrate` usa `uv sync --frozen --no-dev --no-editable --python 3.12` com `UV_PROJECT_ENVIRONMENT` no destino final por SHA, preservando os shebangs. Registra hashes do runtime e dependências, excluindo bytecode mutável. `jeval.json` guarda destinos e revisão; treze links publicam uma CLI, seis skills e seis aliases Claude. Conflitos externos são recusados antes de construir/trocar; falhas de links/persistência compensam a troca. Atualização aceita e rollback usam o mesmo mecanismo, sem envolver chamadas do agente. O comando avalia arquivos offline; não fornece MCP/hooks nem instrumentação automática.
+
+## Interfaces revisadas
+
+`reviewed-source-v1` compartilha somente lifecycle. Cada ferramenta fixa manifesto, comandos, skills e allowlist do patch; alteração de dependências exige revisão. CLI/skills acompanham update e rollback com preflight de ownership e compensação. Python é instalado no caminho final, sem mover shebangs. Fonte, dist e runtime Python têm hashes; node_modules não é integralmente coberto. Reparo preserva fonte/runtime anteriores em falhas. Consulte docs/reviewed-tools.md.

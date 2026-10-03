@@ -1,0 +1,51 @@
+diff --git i/src/client.ts w/src/client.ts
+index 3f02674..6e155fa 100644
+--- i/src/client.ts
++++ w/src/client.ts
+@@ -1,3 +1,4 @@
++import { openRouterKey } from "./openrouter.ts";
+ import type { Answer, Question } from './types.ts';
+ 
+ export const INPUT_PRICE_PER_MILLION_USD = 0.042;
+@@ -43,13 +44,13 @@ export function isPlainRemote(endpoint: string): boolean {
+ }
+ 
+ export function resolveProvider(env: Record<string, string | undefined>, options: ProviderOptions = {}): Provider {
+-  const wanted = options.provider ?? (env.TYPESAFE_API_KEY ? 'typesafe' : env.OPENROUTER_API_KEY ? 'openrouter' : undefined);
++  const wanted = options.provider ?? (env.TYPESAFE_API_KEY ? 'typesafe' : (env.OPENROUTER_API_KEY || openRouterKey()) ? 'openrouter' : undefined);
+   if (wanted !== 'typesafe' && wanted !== 'openrouter') {
+     if (wanted !== undefined) throw new JevError(`unknown provider "${wanted}"; use "typesafe" or "openrouter"`);
+     throw new JevError('no API key: set TYPESAFE_API_KEY or OPENROUTER_API_KEY in the environment');
+   }
+   const preset = wanted === 'typesafe' ? TYPESAFE : OPENROUTER;
+-  const key = env[preset.env];
++  const key = env[preset.env] || (wanted === "openrouter" ? openRouterKey() : undefined);
+   if (!key) throw new JevError(`provider "${wanted}" needs ${preset.env} in the environment`);
+ 
+   let endpoint = preset.endpoint;
+diff --git i/src/openrouter.ts w/src/openrouter.ts
+new file mode 100644
+index 0000000..031025f
+--- /dev/null
++++ w/src/openrouter.ts
+@@ -0,0 +1,20 @@
++import { readFileSync, statSync } from "node:fs";
++import { homedir } from "node:os";
++import { join } from "node:path";
++export function openRouterKey(): string | undefined {
++  if (process.env.OPENROUTER_API_KEY?.trim()) return process.env.OPENROUTER_API_KEY.trim();
++  if (!process.env.HOME) return undefined;
++  try {
++    const path = join(homedir(), ".config/siftr/.env");
++    if ((statSync(path).mode & 0o077) !== 0) return undefined;
++    const line = readFileSync(path, "utf8").split("\n").find(s => /^(?:export\s+)?OPENROUTER_API_KEY=/.test(s.trim()));
++    return line?.trim().replace(/^(?:export\s+)?OPENROUTER_API_KEY=/, "").trim().replace(/^["']|["']$/g, "") || undefined;
++  } catch { return undefined; }
++}
++export const openRouterFetch: typeof fetch = async (input, init) => {
++  const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
++  if (url.href !== "https://openrouter.ai/v1/systemone") throw new Error("OpenRouter decision transport refuses an unexpected destination");
++  const body = JSON.parse(String(init?.body));
++  if (!body.model || String(body.model).startsWith("jev-")) body.model = "typesafe/jev-1.13";
++  return fetch("https://openrouter.ai/api/alpha/decisions", {...init, body: JSON.stringify(body)});
++};

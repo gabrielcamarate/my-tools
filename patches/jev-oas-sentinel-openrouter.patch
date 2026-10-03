@@ -1,0 +1,88 @@
+diff --git i/src/jev_oas_sentinel/cli.py w/src/jev_oas_sentinel/cli.py
+index 3dc4073..08272c7 100644
+--- i/src/jev_oas_sentinel/cli.py
++++ w/src/jev_oas_sentinel/cli.py
+@@ -1,4 +1,5 @@
+ from __future__ import annotations
++from .openrouter import openrouter_key
+ 
+ import argparse
+ from datetime import datetime, timezone
+@@ -223,9 +224,9 @@ def _live_client(
+     if args.api_key_file:
+         api_key = args.api_key_file.read_text(encoding="utf-8").strip()
+     else:
+-        api_key = environment.get("TYPESAFE_API_KEY", "").strip()
++        api_key = (environment.get("OPENROUTER_API_KEY", "").strip() or openrouter_key(environment))
+     if not api_key:
+-        raise ValueError("No TypeSafe API key found; set TYPESAFE_API_KEY, use --api-key-file, or pass --no-jev")
++        raise ValueError("No TypeSafe API key found; set OPENROUTER_API_KEY, use --api-key-file, or pass --no-jev")
+     ca_bundle = args.ca_bundle or environment.get("JEV_CA_BUNDLE") or environment.get("SSL_CERT_FILE")
+     return JevClient(
+         api_key, args.endpoint, args.model, ca_bundle, trace,
+diff --git i/src/jev_oas_sentinel/jev.py w/src/jev_oas_sentinel/jev.py
+index 66394b5..90724be 100644
+--- i/src/jev_oas_sentinel/jev.py
++++ w/src/jev_oas_sentinel/jev.py
+@@ -16,8 +16,8 @@ except ImportError:  # Python 3.9 uses OpenSSL's configured CA bundle instead.
+     truststore = None
+ 
+ 
+-DEFAULT_ENDPOINT = "https://api.typesafe.ai/v1/systemone"
+-DEFAULT_MODEL = "jev-1.13.0"
++DEFAULT_ENDPOINT = "https://openrouter.ai/api/alpha/decisions"
++DEFAULT_MODEL = "typesafe/jev-1.13"
+ TRACE_REDACTION = "[REDACTED]"
+ _SENSITIVE_TRACE_KEYS = {
+     "accesstoken",
+diff --git i/src/jev_oas_sentinel/openrouter.py w/src/jev_oas_sentinel/openrouter.py
+new file mode 100644
+index 0000000..b37965d
+--- /dev/null
++++ w/src/jev_oas_sentinel/openrouter.py
+@@ -0,0 +1,23 @@
++import os
++from pathlib import Path
++import shlex
++
++def openrouter_key(environment=None):
++    environment = os.environ if environment is None else environment
++    if environment.get("OPENROUTER_API_KEY", "").strip():
++        return environment["OPENROUTER_API_KEY"].strip()
++    path = Path(environment.get("HOME", "/nonexistent")) / ".config/siftr/.env"
++    if not environment.get("HOME"):
++        return None
++    try:
++        if path.stat().st_mode & 0o077:
++            return None
++        for line in path.read_text().splitlines():
++            line = line.strip().removeprefix("export ")
++            if line.startswith("OPENROUTER_API_KEY="):
++                values = shlex.split(line.split("=", 1)[1], comments=True)
++                if len(values) == 1:
++                    return values[0]
++    except (OSError, ValueError):
++        pass
++    return None
+diff --git i/tests/test_cli.py w/tests/test_cli.py
+index ce8aba3..07786c0 100644
+--- i/tests/test_cli.py
++++ w/tests/test_cli.py
+@@ -24,7 +24,7 @@ class CliTest(unittest.TestCase):
+ 
+         _live_client(
+             args,
+-            {"TYPESAFE_API_KEY": "test-key", "JEV_CA_BUNDLE": "/etc/company-ca.pem"},
++            {"OPENROUTER_API_KEY": "test-key", "JEV_CA_BUNDLE": "/etc/company-ca.pem"},
+         )
+ 
+         client.assert_called_once_with(
+@@ -128,7 +128,7 @@ class CliTest(unittest.TestCase):
+             document = Path(directory) / "openapi.json"
+             document.write_text(json.dumps({"openapi": "3.0.3", "paths": {}}))
+             stderr = StringIO()
+-            with patch.dict(os.environ, {"TYPESAFE_API_KEY": "ambient-key"}, clear=True):
++            with patch.dict(os.environ, {"OPENROUTER_API_KEY": "ambient-key"}, clear=True):
+                 exit_code = run(
+                     ["compare", "--base", str(document), "--head", str(document)],
+                     stdout=StringIO(), stderr=stderr, environment={},

@@ -1,0 +1,324 @@
+diff --git i/catalog/generated/metadata.ts w/catalog/generated/metadata.ts
+index 877e43b..912101b 100644
+--- i/catalog/generated/metadata.ts
++++ w/catalog/generated/metadata.ts
+@@ -54,7 +54,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'typesafe-ai/jev',
+@@ -630,7 +630,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -701,7 +701,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -1378,7 +1378,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'typesafe-ai/jev',
+@@ -1545,7 +1545,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -1655,7 +1655,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'typesafe-ai/jev',
+@@ -2120,7 +2120,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -2458,7 +2458,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -2615,7 +2615,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -2716,7 +2716,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -2771,7 +2771,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -3072,7 +3072,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -4023,7 +4023,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -4518,7 +4518,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'typesafe-ai/jev',
+@@ -5161,7 +5161,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -5205,7 +5205,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -5675,7 +5675,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -5855,7 +5855,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -6068,7 +6068,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+@@ -6818,7 +6818,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'typesafe-ai/jev',
+@@ -7046,7 +7046,7 @@ export const recipeMetadata: CatalogRecipe[] = [
+     ],
+     evidence: {
+       kind: 'earlier',
+-      label: 'Earlier-evaluator measurement',
++      label: 'Earlier-version measurement',
+       experimental: true,
+       measurement: {
+         model: 'jev-1.13.0',
+diff --git i/cli/evaluation.ts w/cli/evaluation.ts
+index 3851da0..bdc7bb5 100644
+--- i/cli/evaluation.ts
++++ w/cli/evaluation.ts
+@@ -1,3 +1,4 @@
++import { openRouterKey } from "../src/openrouter.js";
+ import { readFile } from 'node:fs/promises';
+ import { parseArgs } from 'node:util';
+ import { compare, evaluate, readEvaluationCases, readRun, replay } from '../evaluation/index.js';
+@@ -43,9 +44,9 @@ async function evaluateFromFile(args: string[]) {
+   const price = values.prices
+     ? priceSchema.parse(JSON.parse(await readFile(values.prices, 'utf8')))
+     : undefined;
+-  if (!process.env.TYPESAFE_API_KEY?.trim())
++  if (!openRouterKey())
+     throw new Error(
+-      'Set TYPESAFE_API_KEY before live evaluation. Replay and compare work offline.',
++      'Set OPENROUTER_API_KEY before live evaluation. Replay and compare work offline.',
+     );
+   const run = await evaluate(positionals[0]!, await readEvaluationCases(values.cases), {
+     out: values.out,
+diff --git i/cli/index.ts w/cli/index.ts
+index 79d2927..3e4ab77 100644
+--- i/cli/index.ts
++++ w/cli/index.ts
+@@ -1,4 +1,5 @@
+ #!/usr/bin/env node
++import { openRouterKey } from "../src/openrouter.js";
+ import { readFile } from 'node:fs/promises';
+ import { stdin, stdout, stderr } from 'node:process';
+ import { z } from 'zod';
+@@ -60,7 +61,7 @@ function printHelp(): void {
+   jev-recipes --version
+ 
+ Categories: ${recipeCategorySchema.options.join(', ')}. Quote multi-word search queries.
+-Live runs send your input to TypeSafe and require TYPESAFE_API_KEY.
++Live runs send your input to OpenRouter and require OPENROUTER_API_KEY.
+ Output is JSON. Errors go to stderr and exit with code 1.
+ Review outcomes are successful evaluations; inspect status before acting.
+ `);
+@@ -115,9 +116,9 @@ async function evaluateOfflineRecipe(name: RecipeName) {
+ }
+ 
+ async function runLiveRecipe(name: RecipeName, source: string): Promise<void> {
+-  if (!process.env.TYPESAFE_API_KEY?.trim()) {
++  if (!openRouterKey()) {
+     throw new Error(
+-      'Set TYPESAFE_API_KEY in your environment before running a live recipe. Try jev-recipes demo ' +
++      'Set OPENROUTER_API_KEY in your environment before running a live recipe. Try jev-recipes demo ' +
+         name +
+         ' without a key.',
+     );
+diff --git i/skills/jev-recipes/SKILL.md w/skills/jev-recipes/SKILL.md
+index e665351..ed41a56 100644
+--- i/skills/jev-recipes/SKILL.md
++++ w/skills/jev-recipes/SKILL.md
+@@ -37,3 +37,7 @@ For a web workflow with an optional second opinion, use the [support-routing sta
+ Exercise ready, review, and provider-failure paths using an injected fixture client. Live calls are a separate action that uses the user's configured provider. When evaluating accuracy, follow [the evaluation guide](https://github.com/agencyenterprise/jev-recipes/blob/main/docs/evaluation.md): retain responses and label provenance, freeze policy on development data, and reserve held-out cases. Preserve experimental labels when evidence is absent or acceptance fails.
+ 
+ [Jevthoven](https://jev-ai-music.com/) is a maintainer-built music application using the package, with sign-in required for playback. Its existence is integration evidence, not a model-quality benchmark.
++
++## My Tools deployment profile
++
++This managed installation uses OPENROUTER_API_KEY and OpenRouter decisions. Reuse the shared credential; do not install a floating version or create per-project keys.  Project dependencies and gates are separate from installing this CLI.
+diff --git i/src/client.ts w/src/client.ts
+index 886c564..730b1ff 100644
+--- i/src/client.ts
++++ w/src/client.ts
+@@ -1,3 +1,4 @@
++import { openRouterKey, openRouterFetch } from "./openrouter.js";
+ import { TypeSafeClient } from '@typesafe-ai/sdk';
+ import type { SystemOneRequest, TypeSafeClientConfig } from '@typesafe-ai/sdk';
+ import { decisionResponseSchema, recipeOptionsSchema } from './schema.js';
+@@ -13,5 +14,5 @@ export async function evaluateWithJev(request: SystemOneRequest, options: Recipe
+ }
+ 
+ export function createClient(config: TypeSafeClientConfig = {}): TypeSafeClient {
+-  return new TypeSafeClient({ timeout: 30_000, logLevel: 'off', ...config });
++  return new TypeSafeClient({ timeout: 30_000, logLevel: 'off', ...config, apiKey: config.apiKey ?? openRouterKey() ?? "", baseURL: config.baseURL ?? 'https://openrouter.ai', fetch: config.fetch ?? (config.baseURL ? fetch : openRouterFetch) });
+ }
+diff --git i/src/openrouter.ts w/src/openrouter.ts
+new file mode 100644
+index 0000000..031025f
+--- /dev/null
++++ w/src/openrouter.ts
+@@ -0,0 +1,20 @@
++import { readFileSync, statSync } from "node:fs";
++import { homedir } from "node:os";
++import { join } from "node:path";
++export function openRouterKey(): string | undefined {
++  if (process.env.OPENROUTER_API_KEY?.trim()) return process.env.OPENROUTER_API_KEY.trim();
++  if (!process.env.HOME) return undefined;
++  try {
++    const path = join(homedir(), ".config/siftr/.env");
++    if ((statSync(path).mode & 0o077) !== 0) return undefined;
++    const line = readFileSync(path, "utf8").split("\n").find(s => /^(?:export\s+)?OPENROUTER_API_KEY=/.test(s.trim()));
++    return line?.trim().replace(/^(?:export\s+)?OPENROUTER_API_KEY=/, "").trim().replace(/^["']|["']$/g, "") || undefined;
++  } catch { return undefined; }
++}
++export const openRouterFetch: typeof fetch = async (input, init) => {
++  const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
++  if (url.href !== "https://openrouter.ai/v1/systemone") throw new Error("OpenRouter decision transport refuses an unexpected destination");
++  const body = JSON.parse(String(init?.body));
++  if (!body.model || String(body.model).startsWith("jev-")) body.model = "typesafe/jev-1.13";
++  return fetch("https://openrouter.ai/api/alpha/decisions", {...init, body: JSON.stringify(body)});
++};
+diff --git i/tests/tooling/cli-input.test.mjs w/tests/tooling/cli-input.test.mjs
+index 0b9d712..fd10f36 100644
+--- i/tests/tooling/cli-input.test.mjs
++++ w/tests/tooling/cli-input.test.mjs
+@@ -115,7 +115,7 @@ globalThis.fetch = async (_url, options) => {
+         source === 'file' ? inputPath : '-',
+       ],
+       {
+-        env: { ...process.env, TYPESAFE_API_KEY: 'offline-test-key' },
++        env: { ...process.env, OPENROUTER_API_KEY: 'offline-test-key' },
+         input: source === 'stdin' ? inputBytes : undefined,
+         encoding: 'utf8',
+         timeout: 10_000,
+diff --git i/tests/tooling/scale.test.mjs w/tests/tooling/scale.test.mjs
+index 24b5dac..fb5d85b 100644
+--- i/tests/tooling/scale.test.mjs
++++ w/tests/tooling/scale.test.mjs
+@@ -68,6 +68,7 @@ test(
+         'catalog/search.js',
+         'catalog/runner.js',
+         'src/data.js',
++        'src/openrouter.js',
+         'src/schema.js',
+         'cli/index.js',
+         'cli/schema.js',

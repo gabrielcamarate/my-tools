@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-03",
+  "controller_tests_passed": 90,
+  "personal_skill_tests_passed": 7,
+  "personal_skills_validated": 23,
+  "live_synthetic_tools_passed": 10,
+  "provider": "openrouter",
+  "codex_savings": "not_measured",
+  "canny_removed": true,
+  "preserved_hooks": {
+    "ai_memory": 7,
+    "jev_pruner": 1
+  },
+  "notes": [
+    "Upstream opt-in live tests/skips preserved, not added by integration.",
+    "Recipes core: 6200 tests; tooling: 177. Example dependency linked to the reviewed local recipe source for offline tests.",
+    "No private projects or production data sent. Cloud environment installation/catalog not asserted.",
+    "Large Rust test build used an owned local-results target after temporary filesystem quota exhaustion."
+  ],
+  "tools": [
+    {
+      "tool": "jev-calibrate",
+      "upstream_commit": "28bc62065b95eb67709e669a0683e9a5f04f9414",
+      "patch_sha256": "28c079b5817e242994d510f0bcdc9dba18b44af2818df409c823714e41e53a67",
+      "tests_passed": 83,
+      "tests_skipped_by_upstream": 0,
+      "failed": 0,
+      "official_skills": []
+    },
+    {
+      "tool": "jev-axi",
+      "upstream_commit": "044fae73a05d5699c4b5c47073f1ffc29d9aa82d",
+      "patch_sha256": "00ce6acaef219d059c20904715173e593c6c1e0ac3c004fd04c031d4f18dab42",
+      "tests_passed": 126,
+      "tests_skipped_by_upstream": 0,
+      "failed": 0,
+      "official_skills": [
+        "jev-axi",
+        "adopting-jev"
+      ]
+    },
+    {
+      "tool": "jev-recipes",
+      "upstream_commit": "53e1743e4702b0e7c4aafc5ceb00c006a69327b1",
+      "patch_sha256": "e28b2af00b295e4159e71f4ba2f1c61c422fb4af3fcfa8597af143a5dc2a8f8f",
+      "tests_passed": 6377,
+      "tests_skipped_by_upstream": 0,
+      "failed": 0,
+      "official_skills": [
+        "jev-recipes"
+      ]
+    },
+    {
+      "tool": "tocsin",
+      "upstream_commit": "6be5828b7020b900f4e95cdac6c447cddb8b750c",
+      "patch_sha256": "f39a7ca96c323ef3d58a23ae69679b963c12e77f0639536b152e0cf79008341c",
+      "tests_passed": 43,
+      "tests_skipped_by_upstream": 1,
+      "failed": 0,
+      "official_skills": []
+    },
+    {
+      "tool": "docjev",
+      "upstream_commit": "c7abe276a970605feb9cb8b27513365b6c10726e",
+      "patch_sha256": "a23a43e13ce12ca050c2a7bc5adca7612a5f74ac01128b7aa00e6ca7265d5797",
+      "tests_passed": 193,
+      "tests_skipped_by_upstream": 3,
+      "failed": 0,
+      "official_skills": []
+    },
+    {
+      "tool": "jev-spec",
+      "upstream_commit": "f5868225fde330ec068378edb273d77015da847e",
+      "patch_sha256": "dceec0b5d51309ed9853bfc99db1afe0c27195113a4c3940ed8938093d03d214",
+      "tests_passed": 195,
+      "tests_skipped_by_upstream": 0,
+      "failed": 0,
+      "official_skills": [
+        "jev-spec-init",
+        "jev-spec-fix"
+      ]
+    },
+    {
+      "tool": "jev-oas-sentinel",
+      "upstream_commit": "fae78bcd9fa84e17d4c26b93809f7ce23056828a",
+      "patch_sha256": "86ca1b9b046469610a40fd4cce31cb3fec2e9b771138f0b829bc8c1ffc9f583a",
+      "tests_passed": 40,
+      "tests_skipped_by_upstream": 0,
+      "failed": 0,
+      "official_skills": []
+    },
+    {
+      "tool": "hunch",
+      "upstream_commit": "c2c680ed2c12c42c8a1b668a4b0b0858c5f463a6",
+      "patch_sha256": "f80393de93d2e3bb704c5776bf76bed5d5a848ae03bc96bc20f9bc01b49a75b2",
+      "tests_passed": 352,
+      "tests_skipped_by_upstream": 1,
+      "failed": 0,
+      "official_skills": [
+        "hunch"
+      ]
+    },
+    {
+      "tool": "snifftest",
+      "upstream_commit": "240653e2b082c114c38fed50a42e7eb311e21219",
+      "patch_sha256": "ae3960f5a642a26a8224e642605dd8fcb2a8adb6e0d555add15d79e811a9af8f",
+      "tests_passed": 647,
+      "tests_skipped_by_upstream": 1,
+      "failed": 0,
+      "official_skills": [
+        "snifftest"
+      ]
+    },
+    {
+      "tool": "semdecide",
+      "upstream_commit": "33cf5c03c50e02e59df3f3ea81f0650f6b791545",
+      "patch_sha256": "cdb2adb8d4bf3d63834d23b5ca973c7046c53b5dc005584b1aabcdf50de1fa2c",
+      "tests_passed": 34,
+      "tests_skipped_by_upstream": 0,
+      "failed": 0,
+      "official_skills": []
+    }
+  ]
+}

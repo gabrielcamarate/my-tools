@@ -14,7 +14,6 @@ O controlador usa Python 3.11+ e biblioteca padrão; Linux é o alvo validado. R
 | [Siftr](https://github.com/Bentlybro/siftr) | CLI `siftr` e MCP oficial `siftr mcp` | Experimental; quatro ferramentas disponíveis |
 | [Jev Pruner](https://github.com/tamaratran/jev-pruner) | Plugin/skill oficial Codex e wrapper upstream | Experimental: OpenRouter, engine upstream preservado e poda live verificada |
 | [Jev Test Filter](https://github.com/mizchi/jev-test-filter) | CLI `jev-test-filter` e skill upstream | Experimental: seleção live via OpenRouter, preservando gates finais |
-| [Canny](https://github.com/qkal/Canny) | CLI `canny` e hooks upstream | Experimental: OpenRouter e ledger de evidência; ativação/confiança por projeto; Cloud sem hooks não é supervisionado |
 | [Jev Browser](https://github.com/tontoko/jev-browser) | CLI `jev-browser`, MCP `jev-browser-mcp` e skill upstream | Experimental: Chromium isolado, OpenRouter e gravação/readback live verificados |
 
 O MCP do Siftr oferece `semantic_search`, `focused_read`, `pick_relevant` e `filter_output` (experimental). Fonte upstream intacta; não há proxy ou tradução dos nomes/parâmetros.
@@ -167,22 +166,6 @@ Reaplique integrate nas instalações antigas: o registro antigo é compatível,
 Conflitos externos abortam antes de trocar qualquer link; falhas compensam a troca.
 Após configurar, uma nova sessão pode ser necessária para atualizar o catálogo.
 
-## Canny com OpenRouter
-
-Node.js 22+, Git e npm/npx são necessários. A instalação obtém a revisão aceita do Canny 0.3.0 e aplica somente o ajuste de provedor; compila com o pnpm fixado pelo upstream. Não há MCP nem skill upstream nesta revisão.
-
-```bash
-my-tools install canny
-my-tools integrate canny --apply
-# Na raiz do projeto que será supervisionado, após revisar envio de dados:
-canny init --codex
-# No Codex CLI: /hooks para revisar e confiar nos hooks; projeto também precisa estar trusted.
-canny status
-canny replay
-```
-
-O comando estável acompanha update/rollback. A integração publica a CLI, não ativa hooks pessoais ou de todos os projetos. Nos testes, bloqueou conclusão sem check e após teste falhando, liberando após um teste aprovado. Uma sessão CLI isolada registrou edição/check/conclusão pelos hooks oficiais. Não há economia de tokens comprovada; o benefício é evidência e possível redução de retrabalho. O modo padrão pode permitir outra conclusão com aviso, e um check reconhecido não prova toda a tarefa. Veja [limites, dados enviados, evidência e Cloud](docs/canny.md).
-
 ## Jeval: medir a confiabilidade das decisões
 
 ```bash
@@ -197,3 +180,20 @@ jeval report --root /caminho/avaliacao
 Jeval 0.2.0 é uma CLI offline, sem alteração upstream nem chave necessária. Python 3.12/uv instalam o pacote oficial `jeval-cli` a partir da fonte aceita e do `uv.lock`, em runtime separado por SHA. Não use `pip install jeval`: esse nome pertence a outro pacote. Seis skills oficiais ficam vinculadas à fonte no armazenamento My Tools, com links Codex/Claude. Update e rollback acompanham CLI e skills.
 
 O teste real usou decisões Jev via OpenRouter e rótulos sintéticos. A avaliação distinguiu 16 acertos de uma amostra insuficiente; um controle com 40 erros em 200 decisões revelou excesso de confiança. O benefício é verificar qualidade antes de automatizar, sem economia direta de tokens comprovada. Não instrumentamos projetos nem criamos benchmarks automáticos. Cloud precisa instalar runtime/links e receber instruções, mas não depende de MCP ou segredo para avaliar arquivos. Veja [uso, testes e limites](docs/jeval.md).
+
+## Dez ferramentas adicionais
+
+Versões fixadas e interface upstream, com a chave OpenRouter compartilhada. [Comandos, skills, testes, hooks e requisitos Cloud](docs/reviewed-tools.md).
+
+| Ferramenta | Função |
+|---|---|
+| [jev-calibrate](https://github.com/smkrv/jev-calibrate) | Avalia perguntas e limiares com exemplos rotulados |
+| [jev-axi](https://github.com/shiftynick/jev-axi) | Classifica e ordena decisões em lote |
+| [jev-recipes](https://github.com/agencyenterprise/jev-recipes) | 248 decisões tipadas para automações e aplicações |
+| [tocsin](https://github.com/TPAteeq/tocsin) | Agrupa e prioriza padrões de logs |
+| [docjev](https://github.com/jerryjliu/docjev) | Classifica documentos e separa páginas |
+| [jev-spec](https://github.com/nozomi-koborinai/jev-spec) | Compara código com requisitos Markdown |
+| [jev-oas-sentinel](https://github.com/ShuhanSun/jev-oas-sentinel) | Detecta riscos de incompatibilidade OpenAPI |
+| [hunch](https://github.com/Kelbie/hunch) | Busca comportamento e revisa diffs contra regras |
+| [snifftest](https://github.com/DanRWilloughby/snifftest) | Verifica texto contra regras de estilo |
+| [semdecide](https://github.com/sharziki/semdecide) | Classifica e filtra texto ou JSONL |

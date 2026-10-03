@@ -21,9 +21,9 @@ def parser():
     sub = commands.add_parser("install")
     sub.add_argument("tool")
     sub = commands.add_parser("repair")
-    sub.add_argument("tool", choices=["jev-pruner"])
+    sub.add_argument("tool")
     sub = commands.add_parser("integrate")
-    sub.add_argument("tool", choices=["siftr", "jev-pruner", "jev-test-filter", "jev-browser", "canny", "jeval"])
+    sub.add_argument("tool", choices=["siftr", "jev-pruner", "jev-test-filter", "jev-browser", "jeval", "jev-calibrate", "jev-axi", "jev-recipes", "tocsin", "docjev", "jev-spec", "jev-oas-sentinel", "hunch", "snifftest", "semdecide"])
     sub.add_argument("--apply", action="store_true")
     sub.add_argument("--bin-dir", type=Path)
     for name in ("outdated", "update"):
@@ -60,7 +60,7 @@ def main(argv=None):
         if args.command == "integrate":
             if args.tool == "jev-pruner":
                 from .plugins import integrate
-            elif args.tool in ("jev-test-filter", "jev-browser", "canny", "jeval"):
+            elif args.tool != "siftr":
                 from .commands import integrate
             else:
                 from .native import integrate
@@ -83,8 +83,14 @@ def main(argv=None):
                         if args.command == "install":
                             result = manager.install(name)
                         elif args.command == "repair":
-                            from .pruner import rebuild
-                            result = rebuild(manager)
+                            if manager.spec(name)["installer"] == "reviewed-source-v1":
+                                from .reviewed import repair
+                                result = repair(manager, name)
+                            elif name == "jev-pruner":
+                                from .pruner import rebuild
+                                result = rebuild(manager)
+                            else:
+                                raise ToolError("Reparo não disponível para esta interface")
                         elif args.command == "outdated":
                             result = manager.discover(name)
                         elif args.command == "update":

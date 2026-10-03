@@ -6,14 +6,12 @@ import uuid
 from .core import ToolError, atomic_json, read_json
 
 NAME = 'jev-test-filter'
-FIELDS = {NAME: ('command', 'skill'), 'jev-browser': ('command', 'mcp_command', 'skill'), 'canny': ('command',)}
+FIELDS = {NAME: ('command', 'skill'), 'jev-browser': ('command', 'mcp_command', 'skill')}
 SKILLS = {NAME: NAME, 'jev-browser': 'jev-browser-playwright'}
 
 
 def targets(manager, commit, name=NAME):
     source = manager.location(name, commit) / 'source'
-    if name == 'canny':
-        return [source / 'dist/cli.js']
     return ([source / 'dist/cli.js', source / 'dist/mcp-stdio.js', source / 'skills/jev-browser']
             if name == 'jev-browser' else [source / 'dist/cli.js', source / 'skills' / NAME])
 
@@ -82,6 +80,9 @@ def restore(changes):
 
 
 def integrate(manager, name, apply=False, bin_dir=None):
+    if manager.spec(name)["installer"] == "reviewed-source-v1":
+        from . import reviewed
+        return reviewed.integrate(manager, name, apply, bin_dir)
     if name == "jeval":
         from . import jeval
         return jeval.integrate(manager, name, apply, bin_dir)
@@ -112,6 +113,9 @@ def integrate(manager, name, apply=False, bin_dir=None):
 
 
 def synchronize(manager, name, commit):
+    if manager.spec(name)["installer"] == "reviewed-source-v1":
+        from . import reviewed
+        return reviewed.synchronize(manager, name, commit)
     if name == "jeval":
         from . import jeval
         return jeval.synchronize(manager, name, commit)
@@ -130,6 +134,9 @@ def synchronize(manager, name, commit):
 
 
 def diagnose(manager, name, commit):
+    if manager.spec(name)["installer"] == "reviewed-source-v1":
+        from . import reviewed
+        return reviewed.diagnose(manager, name, commit)
     if name == "jeval":
         from . import jeval
         return jeval.diagnose(manager, name, commit)
@@ -146,8 +153,6 @@ def diagnose(manager, name, commit):
         link = Path(entry['claude_skill'])
         if not link.is_symlink() or os.readlink(link) != entry['skill'] or link.resolve() != Path(entry['skill']).resolve():
             raise ToolError('Skill Claude diverge do link gerenciado')
-    if name == 'canny':
-        return {'official_command': entry['command'], 'hook_status': 'project_activation_and_host_trust_not_verified'}
     return {'official_command': entry['command'], 'official_skill': entry['skill'],
             'claude_skill_status': 'linked' if 'claude_skill' in entry else 'not_registered',
             **({'official_claude_skill': entry['claude_skill']} if 'claude_skill' in entry else {}),

@@ -1,0 +1,99 @@
+diff --git i/src/reflex_guard/providers/typesafe.py w/src/reflex_guard/providers/typesafe.py
+index b615b89..42232a4 100644
+--- i/src/reflex_guard/providers/typesafe.py
++++ w/src/reflex_guard/providers/typesafe.py
+@@ -13,16 +13,22 @@ from typing import Any, Callable, Mapping
+ 
+ from .base import ProviderError
+ 
+-DEFAULT_URL = "https://api.typesafe.ai/v1/systemone"
++DEFAULT_URL = "https://openrouter.ai/api/alpha/decisions"
+ Transport = Callable[[urllib.request.Request, float], bytes]
+ Sleep = Callable[[float], None]
+ 
+ 
+ def load_api_key() -> str:
+-    if key := os.environ.get("TYPESAFE_API_KEY"):
++    if key := os.environ.get("OPENROUTER_API_KEY"):
+         return key
+-    path = Path(os.environ.get("TYPESAFE_CREDENTIALS_FILE", "~/.config/typesafe/credentials.env")).expanduser()
++    if not os.environ.get("HOME") and not os.environ.get("OPENROUTER_CREDENTIALS_FILE"):
++        raise ProviderError("OPENROUTER_API_KEY is required")
++    if not os.environ.get("HOME") and not os.environ.get("OPENROUTER_CREDENTIALS_FILE"):
++        raise ProviderError("OPENROUTER_API_KEY is required")
++    path = Path(os.environ.get("OPENROUTER_CREDENTIALS_FILE", "~/.config/siftr/.env")).expanduser()
+     try:
++        if path.stat().st_mode & 0o077:
++            raise ProviderError("OpenRouter credentials file must be private")
+         lines = path.read_text(encoding="utf-8").splitlines()
+     except OSError as exc:
+         raise ProviderError(f"cannot read credentials file {path}: {exc}") from exc
+@@ -32,12 +38,12 @@ def load_api_key() -> str:
+             continue
+         if line.startswith("export "):
+             line = line[len("export "):].lstrip()
+-        if not line.startswith("TYPESAFE_API_KEY="):
++        if not line.startswith("OPENROUTER_API_KEY="):
+             continue
+         parsed = shlex.split(line.split("=", 1)[1], comments=True)
+         if len(parsed) == 1 and parsed[0]:
+             return parsed[0]
+-    raise ProviderError(f"TYPESAFE_API_KEY not found in {path}")
++    raise ProviderError(f"OPENROUTER_API_KEY not found in {path}")
+ 
+ 
+ def _default_transport(request: urllib.request.Request, timeout: float) -> bytes:
+@@ -136,7 +142,7 @@ class TypeSafeProvider:
+ 
+     def evaluate(self, state: Any, questions: Mapping[str, Mapping[str, Any]]) -> tuple[dict[str, Any], int]:
+         key = self.api_key or load_api_key()
+-        payload = json.dumps({"state": state, "model": "jev-latest", "questions": questions}, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
++        payload = json.dumps({"state": state, "model": "typesafe/jev-1.13", "questions": questions}, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+         request = urllib.request.Request(self.url, data=payload, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, method="POST")
+         started = time.perf_counter()
+         for attempt in range(self.retries + 1):
+diff --git i/tests/test_reflex.py w/tests/test_reflex.py
+index abd0838..1c9dc01 100644
+--- i/tests/test_reflex.py
++++ w/tests/test_reflex.py
+@@ -47,18 +47,19 @@ class PolicyTests(unittest.TestCase):
+ 
+ class CredentialTests(unittest.TestCase):
+     def test_environment_key_wins(self):
+-        with patch.dict(os.environ, {"TYPESAFE_API_KEY": "env-key"}, clear=True):
++        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "env-key"}, clear=True):
+             self.assertEqual(load_api_key(), "env-key")
+ 
+     def test_loads_shell_quoted_credentials_file(self):
+         with tempfile.TemporaryDirectory() as directory:
+             path = Path(directory) / "credentials.env"
+-            path.write_text("export TYPESAFE_API_KEY='file-key'\n")
+-            with patch.dict(os.environ, {"TYPESAFE_CREDENTIALS_FILE": str(path)}, clear=True):
++            path.touch(mode=0o600)
++            path.write_text("export OPENROUTER_API_KEY='file-key'\n")
++            with patch.dict(os.environ, {"OPENROUTER_CREDENTIALS_FILE": str(path)}, clear=True):
+                 self.assertEqual(load_api_key(), "file-key")
+ 
+     def test_missing_credentials_fail(self):
+-        with patch.dict(os.environ, {"TYPESAFE_CREDENTIALS_FILE": "/missing/reflex.env"}, clear=True):
++        with patch.dict(os.environ, {"OPENROUTER_CREDENTIALS_FILE": "/missing/reflex.env"}, clear=True):
+             with self.assertRaises(ReflexAPIError):
+                 load_api_key()
+ 
+diff --git i/tests/test_v02.py w/tests/test_v02.py
+index 8fecbae..f84e123 100644
+--- i/tests/test_v02.py
++++ w/tests/test_v02.py
+@@ -180,9 +180,10 @@ class ValidationTests(unittest.TestCase):
+     def test_credentials_file_accepts_exported_and_plain_assignments(self):
+         with tempfile.TemporaryDirectory() as directory:
+             path = Path(directory) / "credentials.env"
+-            for content in ("TYPESAFE_API_KEY=plain-key\n", "export TYPESAFE_API_KEY='quoted-key'\n"):
++            for content in ("OPENROUTER_API_KEY=plain-key\n", "export OPENROUTER_API_KEY='quoted-key'\n"):
++                path.touch(mode=0o600)
+                 path.write_text(content, encoding="utf-8")
+-                with patch.dict(os.environ, {"TYPESAFE_CREDENTIALS_FILE": str(path)}, clear=True):
++                with patch.dict(os.environ, {"OPENROUTER_CREDENTIALS_FILE": str(path)}, clear=True):
+                     self.assertIn(load_api_key(), {"plain-key", "quoted-key"})
+ 
+     def test_semdecide_api_url_precedes_compatibility_url(self):

@@ -46,17 +46,6 @@
       ],
       "installer": "jev-browser-source-v1"
     },
-    "canny": {
-      "repository": "https://github.com/qkal/Canny.git",
-      "branch": "main",
-      "approved_commit": "f2c5e53779445d60dc4a09d2dbced2308fccb820",
-      "status": "experimental",
-      "license": "MIT",
-      "credential_environment": [
-        "OPENROUTER_API_KEY"
-      ],
-      "installer": "canny-source-v1"
-    },
     "jeval": {
       "repository": "https://github.com/rlaope/jeval.git",
       "branch": "main",
@@ -65,6 +54,321 @@
       "license": "Apache-2.0",
       "credential_environment": [],
       "installer": "jeval-source-v1"
+    },
+    "jev-calibrate": {
+      "repository": "https://github.com/smkrv/jev-calibrate.git",
+      "branch": "main",
+      "approved_commit": "28bc62065b95eb67709e669a0683e9a5f04f9414",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "reviewed-source-v1",
+      "interface": {
+        "kind": "npm",
+        "manifest": "package.json",
+        "manifest_sha256": "d6c2d2b1767ac05091c88d44c752df3842a5b1450027f888718566eb900db6b5",
+        "commands": {
+          "jev-calibrate": "dist/cli.js"
+        },
+        "skills": [],
+        "patch_paths": [
+          "src/client.ts",
+          "src/openrouter.ts"
+        ]
+      }
+    },
+    "jev-axi": {
+      "repository": "https://github.com/shiftynick/jev-axi.git",
+      "branch": "main",
+      "approved_commit": "044fae73a05d5699c4b5c47073f1ffc29d9aa82d",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "reviewed-source-v1",
+      "interface": {
+        "kind": "pnpm",
+        "manifest": "package.json",
+        "manifest_sha256": "351cc4f2395646529d74fe3437e166154e5f286e45f16e09571227b94bcca289",
+        "commands": {
+          "jev-axi": "dist/bin/jev-axi.js"
+        },
+        "skills": [
+          "skills/jev-axi",
+          "skills/adopting-jev"
+        ],
+        "patch_paths": [
+          "skills/adopting-jev/SKILL.md",
+          "skills/jev-axi/SKILL.md",
+          "src/client.ts",
+          "src/config.ts",
+          "src/openrouter.ts",
+          "test/cache.test.ts",
+          "test/cli.test.ts",
+          "test/config.test.ts",
+          "test/exec.test.ts",
+          "test/githooks.test.ts",
+          "test/recipes.test.ts",
+          "test/safety.test.ts",
+          "test/stdin.test.ts",
+          "test/supervise.test.ts",
+          "test/update.test.ts"
+        ]
+      }
+    },
+    "jev-recipes": {
+      "repository": "https://github.com/agencyenterprise/jev-recipes.git",
+      "branch": "main",
+      "approved_commit": "53e1743e4702b0e7c4aafc5ceb00c006a69327b1",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "reviewed-source-v1",
+      "interface": {
+        "kind": "npm",
+        "manifest": "package.json",
+        "manifest_sha256": "d3cc9a77a0bc4e7a1e1c606314e795822b5a50f7d467acf8b605081eca6e5c2f",
+        "commands": {
+          "jev-recipes": "dist/cli/index.js"
+        },
+        "skills": [
+          "skills/jev-recipes"
+        ],
+        "patch_paths": [
+          "catalog/generated/metadata.ts",
+          "cli/evaluation.ts",
+          "cli/index.ts",
+          "skills/jev-recipes/SKILL.md",
+          "src/client.ts",
+          "src/openrouter.ts",
+          "tests/tooling/cli-input.test.mjs",
+          "tests/tooling/scale.test.mjs"
+        ]
+      }
+    },
+    "tocsin": {
+      "repository": "https://github.com/TPAteeq/tocsin.git",
+      "branch": "main",
+      "approved_commit": "6be5828b7020b900f4e95cdac6c447cddb8b750c",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "reviewed-source-v1",
+      "interface": {
+        "kind": "rust",
+        "manifest": "Cargo.toml",
+        "manifest_sha256": "bca4f08a442a0a583ad6a1d35b0a47f1d31d7c11d3531a446f7456fb3f7ce7ac",
+        "commands": {
+          "tocsin": "target/release/tocsin"
+        },
+        "skills": [],
+        "patch_paths": [
+          "src/jev.rs",
+          "src/main.rs",
+          "tests/cli.rs",
+          "tests/jev.rs"
+        ]
+      }
+    },
+    "docjev": {
+      "repository": "https://github.com/jerryjliu/docjev.git",
+      "branch": "main",
+      "approved_commit": "c7abe276a970605feb9cb8b27513365b6c10726e",
+      "status": "experimental",
+      "license": "Apache-2.0",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "reviewed-source-v1",
+      "interface": {
+        "kind": "python",
+        "manifest": "pyproject.toml",
+        "manifest_sha256": "cb80e83d3f552ed0fa8802c253fbba2f6f0d096fadf17159c7d97d773174b030",
+        "commands": {
+          "docjev": "docjev"
+        },
+        "skills": [],
+        "patch_paths": [
+          "src/jev_docs/doctor.py",
+          "src/jev_docs/engines/jev.py",
+          "src/jev_docs/engines/openrouter.py",
+          "src/jev_docs/web/app.py",
+          "tests/test_benchmark_report.py",
+          "tests/test_cli.py",
+          "tests/test_split.py",
+          "tests/test_web.py"
+        ]
+      }
+    },
+    "jev-spec": {
+      "repository": "https://github.com/nozomi-koborinai/jev-spec.git",
+      "branch": "main",
+      "approved_commit": "f5868225fde330ec068378edb273d77015da847e",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "reviewed-source-v1",
+      "interface": {
+        "kind": "npm",
+        "manifest": "package.json",
+        "manifest_sha256": "3029b597a2e89f346eaade82824a859d71b7f94e6b131f63549ef10348c3a168",
+        "commands": {
+          "jev-spec": "bin/jev-spec.js"
+        },
+        "skills": [
+          "skills/jev-spec-init",
+          "skills/jev-spec-fix"
+        ],
+        "patch_paths": [
+          "skills/jev-spec-fix/SKILL.md",
+          "skills/jev-spec-init/SKILL.md",
+          "src/evaluator/jev-evaluator.ts",
+          "src/evaluator/openrouter.ts",
+          "test/cli.test.ts",
+          "test/code-limits.test.ts",
+          "test/diff-mode.test.ts",
+          "test/dry-run.test.ts",
+          "test/evaluator.test.ts"
+        ]
+      }
+    },
+    "jev-oas-sentinel": {
+      "repository": "https://github.com/ShuhanSun/jev-oas-sentinel.git",
+      "branch": "main",
+      "approved_commit": "fae78bcd9fa84e17d4c26b93809f7ce23056828a",
+      "status": "experimental",
+      "license": "Apache-2.0",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "reviewed-source-v1",
+      "interface": {
+        "kind": "python",
+        "manifest": "pyproject.toml",
+        "manifest_sha256": "0bdcf27a7944b02fa8779f84aeb0824f4dd4118305dc984d6deb12c403857314",
+        "commands": {
+          "jev-oas-sentinel": "jev-oas-sentinel"
+        },
+        "skills": [],
+        "patch_paths": [
+          "src/jev_oas_sentinel/cli.py",
+          "src/jev_oas_sentinel/jev.py",
+          "src/jev_oas_sentinel/openrouter.py",
+          "tests/test_cli.py"
+        ]
+      }
+    },
+    "hunch": {
+      "repository": "https://github.com/Kelbie/hunch.git",
+      "branch": "main",
+      "approved_commit": "c2c680ed2c12c42c8a1b668a4b0b0858c5f463a6",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "reviewed-source-v1",
+      "interface": {
+        "kind": "bun",
+        "manifest": "package.json",
+        "manifest_sha256": "b3412301d984d85f264012dac0b8a1ecdd4562cdafec560837b347bfaa6463e4",
+        "commands": {
+          "hunch": "packages/cli/dist/bin.js"
+        },
+        "skills": [
+          "skills/hunch"
+        ],
+        "patch_paths": [
+          "packages/cli/src/credentials.ts",
+          "packages/cli/src/program.ts",
+          "packages/cli/src/setup/wizard.ts",
+          "packages/cli/test/credentials.test.ts",
+          "packages/cli/test/find.test.ts",
+          "packages/cli/test/wizard.test.ts",
+          "packages/core/src/jev.ts",
+          "packages/core/src/openrouter.ts",
+          "packages/core/src/provider.ts",
+          "packages/core/src/schema.ts",
+          "packages/core/test/provider.test.ts",
+          "skills/hunch/SKILL.md",
+          "skills/hunch/examples/auth.md"
+        ]
+      }
+    },
+    "snifftest": {
+      "repository": "https://github.com/DanRWilloughby/snifftest.git",
+      "branch": "main",
+      "approved_commit": "240653e2b082c114c38fed50a42e7eb311e21219",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "reviewed-source-v1",
+      "interface": {
+        "kind": "bun",
+        "manifest": "package.json",
+        "manifest_sha256": "20db9bc8cdbb853003bd4581c9efcd37a3cdb035195b6e533057898b9a8c0010",
+        "commands": {
+          "snifftest": "dist/snifftest.js"
+        },
+        "skills": [
+          "skills/snifftest"
+        ],
+        "patch_paths": [
+          "action.yml",
+          "hooks/pre-commit",
+          "skills/snifftest/SKILL.md",
+          "src/cli.ts",
+          "src/consent.ts",
+          "src/jev.ts",
+          "src/openrouter.ts",
+          "tests/action.test.ts",
+          "tests/bin.test.ts",
+          "tests/cli.test.ts",
+          "tests/consent.test.ts",
+          "tests/eval.test.ts",
+          "tests/hook.test.ts",
+          "tests/hygiene.test.ts",
+          "tests/jev.test.ts",
+          "tests/plugin.test.ts",
+          "tests/serve.test.ts"
+        ]
+      }
+    },
+    "semdecide": {
+      "repository": "https://github.com/sharziki/semdecide.git",
+      "branch": "main",
+      "approved_commit": "33cf5c03c50e02e59df3f3ea81f0650f6b791545",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "reviewed-source-v1",
+      "interface": {
+        "kind": "python",
+        "manifest": "pyproject.toml",
+        "manifest_sha256": "c553f7d1cb5d56a315f3390e3e5faa9b5f84fefd34711ffdb5ca34074a438414",
+        "commands": {
+          "semdecide": "semdecide"
+        },
+        "skills": [],
+        "patch_paths": [
+          "src/reflex_guard/providers/typesafe.py",
+          "tests/test_reflex.py",
+          "tests/test_v02.py"
+        ]
+      }
     }
   }
 }

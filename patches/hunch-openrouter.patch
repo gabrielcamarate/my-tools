@@ -1,0 +1,417 @@
+diff --git i/packages/cli/src/credentials.ts w/packages/cli/src/credentials.ts
+index ed8956d..23595ee 100644
+--- i/packages/cli/src/credentials.ts
++++ w/packages/cli/src/credentials.ts
+@@ -7,7 +7,7 @@ import { isAuthError, type Provider } from "../../core/src/index.js";
+ export type { Provider };
+ 
+ /** The only secrets the store will ever hold or hand to the environment. */
+-export const KEY_NAMES = ["AI_GATEWAY_API_KEY", "TYPESAFE_API_KEY"] as const;
++export const KEY_NAMES = ["AI_GATEWAY_API_KEY", "OPENROUTER_API_KEY"] as const;
+ export type KeyName = (typeof KEY_NAMES)[number];
+ /** The providers a key signs in to. SemIf is a local program, so there is nothing to sign in to. */
+ export type KeyProvider = "gateway" | "typesafe";
+@@ -27,7 +27,7 @@ export type SemifInstall = Partial<Record<SemifField, string>>;
+ const FIELDS = [...KEY_NAMES, ...LINK_FIELDS, ...SEMIF_FIELDS] as const;
+ type Field = (typeof FIELDS)[number];
+ 
+-export const keyNameFor = (provider: KeyProvider): KeyName => (provider === "gateway" ? "AI_GATEWAY_API_KEY" : "TYPESAFE_API_KEY");
++export const keyNameFor = (provider: KeyProvider): KeyName => (provider === "gateway" ? "AI_GATEWAY_API_KEY" : "OPENROUTER_API_KEY");
+ 
+ /**
+  * One file per person, not per project, so `hunch` works in any directory after one login. It
+@@ -254,7 +254,7 @@ export function authHint(message: string): string | null {
+     "  npx @kelbie/hunch auth login --with-token < file      reads the key from standard input, for scripts",
+     "  npx @kelbie/hunch auth login --vercel                 no key: reuse a Vercel CLI login, from a linked project",
+     "  npx @kelbie/hunch auth login --provider semif --install   no account anywhere: install an open model and run it here",
+-    "or export TYPESAFE_API_KEY or AI_GATEWAY_API_KEY. `npx @kelbie/hunch auth status` shows what is found.",
++    "or export OPENROUTER_API_KEY or AI_GATEWAY_API_KEY. `npx @kelbie/hunch auth status` shows what is found.",
+     "An agent must not ask for the key in conversation or pass it as an argument.",
+   ].join("\n");
+ }
+diff --git i/packages/cli/src/program.ts w/packages/cli/src/program.ts
+index 9f53657..6472285 100644
+--- i/packages/cli/src/program.ts
++++ w/packages/cli/src/program.ts
+@@ -372,7 +372,7 @@ Exits 1 when there is no key, no Vercel project (linked here or stored) and no S
+   program.addHelpText("after", `
+ Model access (no key is ever written to your config):
+   AI_GATEWAY_API_KEY   Vercel AI Gateway, the default provider
+-  TYPESAFE_API_KEY     TypeSafe directly, with provider = "typesafe" in your config
++  OPENROUTER_API_KEY     TypeSafe directly, with provider = "typesafe" in your config
+   SEMIF_*              SemIf, an open model on this machine, with provider = "semif"; no key
+ Looked up in the environment, then .env files in the working directory, then what
+ "hunch auth login" saved, which works in every directory. Any command takes --provider to pick
+@@ -433,7 +433,7 @@ const semifIsSetUp = () => SEMIF_FIELDS.some((name) => process.env[name]);
+ /** Whether a provider has anything to sign in with here. A provider with nothing is not a fallback. */
+ function providerIsReady(provider: Provider, root: string): boolean {
+   if (provider === "semif") return semifIsSetUp();
+-  if (provider === "typesafe") return Boolean(process.env.TYPESAFE_API_KEY);
++  if (provider === "typesafe") return Boolean(process.env.OPENROUTER_API_KEY);
+   return Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || readVercelLink() || linkedVercelProject(root));
+ }
+ 
+@@ -658,7 +658,7 @@ async function runAuthLogin(opts: Opts, root: string) {
+       initialValue: "gateway",
+       options: [
+         { value: "gateway", label: "Vercel AI Gateway", hint: "AI_GATEWAY_API_KEY, from API Keys → Create key" },
+-        { value: "typesafe", label: "TypeSafe directly", hint: "TYPESAFE_API_KEY" },
++        { value: "typesafe", label: "TypeSafe directly", hint: "OPENROUTER_API_KEY" },
+         { value: "vercel", label: "Vercel AI Gateway, without a key", hint: "your Vercel CLI login and the project linked in this directory" },
+         { value: "semif", label: "SemIf, on this machine", hint: "an open model you run yourself; no key and no service" },
+       ],
+diff --git i/packages/cli/src/setup/wizard.ts w/packages/cli/src/setup/wizard.ts
+index 8354301..b377d55 100644
+--- i/packages/cli/src/setup/wizard.ts
++++ w/packages/cli/src/setup/wizard.ts
+@@ -169,8 +169,8 @@ export async function askTarget(io: WizardIo): Promise<Target | null> {
+ }
+ 
+ /** Keys already reachable by `check`. A key from `hunch auth login` is in `env` by the time this runs. */
+-export function existingKey(root: string, env: NodeJS.ProcessEnv = process.env): "AI_GATEWAY_API_KEY" | "TYPESAFE_API_KEY" | null {
+-  for (const name of ["AI_GATEWAY_API_KEY", "TYPESAFE_API_KEY"] as const) {
++export function existingKey(root: string, env: NodeJS.ProcessEnv = process.env): "AI_GATEWAY_API_KEY" | "OPENROUTER_API_KEY" | null {
++  for (const name of ["AI_GATEWAY_API_KEY", "OPENROUTER_API_KEY"] as const) {
+     if (env[name]) return name;
+     for (const file of [".env.local", ".env"]) {
+       const path = join(root, file);
+@@ -186,7 +186,7 @@ export async function askKey(io: WizardIo): Promise<KeyChoice | null> {
+     initialValue: "gateway",
+     options: [
+       { value: "gateway", label: "Vercel AI Gateway", hint: "AI_GATEWAY_API_KEY, from API Keys → Create key" },
+-      { value: "typesafe", label: "TypeSafe directly", hint: "TYPESAFE_API_KEY" },
++      { value: "typesafe", label: "TypeSafe directly", hint: "OPENROUTER_API_KEY" },
+       { value: "later", label: "I'll add the key later", hint: "check won't run until you do" },
+     ],
+   });
+diff --git i/packages/cli/test/credentials.test.ts w/packages/cli/test/credentials.test.ts
+index 03f7841..3beb80f 100644
+--- i/packages/cli/test/credentials.test.ts
++++ w/packages/cli/test/credentials.test.ts
+@@ -10,7 +10,7 @@ const BIN = join(import.meta.dir, "../src/bin.ts");
+ 
+ /** The CLI as a person runs it: its own config directory, no inherited keys, a directory with no `.env`. */
+ function hunch(args: string[], opts: { config: string; cwd?: string; input?: string; env?: Record<string, string> }) {
+-  const { AI_GATEWAY_API_KEY: _a, TYPESAFE_API_KEY: _t, VERCEL_OIDC_TOKEN: _o, ...env } = process.env;
++  const { AI_GATEWAY_API_KEY: _a, OPENROUTER_API_KEY: _t, VERCEL_OIDC_TOKEN: _o, ...env } = process.env;
+   return spawnSync("bun", [BIN, ...args], { cwd: opts.cwd ?? dir("hunch-cwd-"), input: opts.input ?? "", encoding: "utf8", env: { ...env, HUNCH_CONFIG_DIR: opts.config, ...opts.env } });
+ }
+ 
+@@ -24,9 +24,9 @@ test("the store lives in the user's config directory, not the project", () => {
+ test("a stored key is owner-only, replaces its predecessor and leaves the other provider's key alone", () => {
+   const path = join(dir(), "nested", "credentials");
+   saveCredential("AI_GATEWAY_API_KEY", "  first\n", path);
+-  saveCredential("TYPESAFE_API_KEY", "ts-key", path);
++  saveCredential("OPENROUTER_API_KEY", "ts-key", path);
+   saveCredential("AI_GATEWAY_API_KEY", "second", path);
+-  expect(readCredentials(path)).toEqual({ AI_GATEWAY_API_KEY: "second", TYPESAFE_API_KEY: "ts-key" });
++  expect(readCredentials(path)).toEqual({ AI_GATEWAY_API_KEY: "second", OPENROUTER_API_KEY: "ts-key" });
+   expect(statSync(path).mode & 0o777).toBe(0o600);
+   expect(looselyPermitted(path)).toBe(false);
+   chmodSync(path, 0o644);
+@@ -46,13 +46,13 @@ test("something that is not a key is refused rather than stored", () => {
+ test("the environment and the project's .env win; a stored key only fills what they left unset", () => {
+   const path = join(dir(), "credentials");
+   saveCredential("AI_GATEWAY_API_KEY", "stored-gw", path);
+-  saveCredential("TYPESAFE_API_KEY", "stored-ts", path);
++  saveCredential("OPENROUTER_API_KEY", "stored-ts", path);
+   const env: Record<string, string | undefined> = { AI_GATEWAY_API_KEY: "from-project" };
+   const applied = applyCredentials(env, path);
+-  expect(applied).toEqual(["TYPESAFE_API_KEY"]);
+-  expect(env).toEqual({ AI_GATEWAY_API_KEY: "from-project", TYPESAFE_API_KEY: "stored-ts" });
+-  expect(keySources(env, applied)).toEqual({ AI_GATEWAY_API_KEY: "environment", TYPESAFE_API_KEY: "stored" });
+-  expect(keySources({}, [])).toEqual({ AI_GATEWAY_API_KEY: "missing", TYPESAFE_API_KEY: "missing" });
++  expect(applied).toEqual(["OPENROUTER_API_KEY"]);
++  expect(env).toEqual({ AI_GATEWAY_API_KEY: "from-project", OPENROUTER_API_KEY: "stored-ts" });
++  expect(keySources(env, applied)).toEqual({ AI_GATEWAY_API_KEY: "environment", OPENROUTER_API_KEY: "stored" });
++  expect(keySources({}, [])).toEqual({ AI_GATEWAY_API_KEY: "missing", OPENROUTER_API_KEY: "missing" });
+ });
+ 
+ test("a tampered store cannot export anything but the two keys", () => {
+@@ -66,9 +66,9 @@ test("a tampered store cannot export anything but the two keys", () => {
+ test("logout removes what was asked, reports what was there, and deletes an emptied file", () => {
+   const path = join(dir(), "credentials");
+   saveCredential("AI_GATEWAY_API_KEY", "gw", path);
+-  saveCredential("TYPESAFE_API_KEY", "ts", path);
++  saveCredential("OPENROUTER_API_KEY", "ts", path);
+   saveVercelLink({ project: "prj_1", team: "team_1" }, path);
+-  expect(removeCredentials(["TYPESAFE_API_KEY"], path)).toEqual(["TYPESAFE_API_KEY"]);
++  expect(removeCredentials(["OPENROUTER_API_KEY"], path)).toEqual(["OPENROUTER_API_KEY"]);
+   expect(readCredentials(path)).toEqual({ AI_GATEWAY_API_KEY: "gw" });
+   expect(readVercelLink(path)).toEqual({ project: "prj_1", team: "team_1" });
+   expect(removeCredentials(undefined, path)).toEqual(["AI_GATEWAY_API_KEY"]);
+@@ -129,7 +129,7 @@ test("a Vercel failure is reported as one, without the helper's raw message", as
+ 
+ test("only authentication failures get the login hint, and it never repeats itself", () => {
+   expect(authHint("AI Gateway authentication failed: No authentication provided.")).toContain("hunch auth login");
+-  expect(authHint("provider = typesafe needs TYPESAFE_API_KEY")).toContain("--with-token");
++  expect(authHint("provider = typesafe needs OPENROUTER_API_KEY")).toContain("--with-token");
+   expect(authHint("Jev request failed (HTTP 401). Check provider credentials, quota and availability.")).not.toBeNull();
+   expect(authHint("Jev request failed (HTTP 429). Check provider credentials, quota and availability.")).toBeNull();
+   expect(authHint("no hunch config found.")).toBeNull();
+@@ -141,15 +141,15 @@ test("login takes the key from standard input, status names its source without s
+   const login = hunch(["auth", "login", "--provider", "typesafe", "--with-token"], { config, input: "ts-secret-value\n" });
+   expect(login.status).toBe(0);
+   expect(login.stdout + login.stderr).not.toContain("ts-secret-value");
+-  expect(readFileSync(join(config, "credentials"), "utf8")).toBe("TYPESAFE_API_KEY=ts-secret-value\n");
++  expect(readFileSync(join(config, "credentials"), "utf8")).toBe("OPENROUTER_API_KEY=ts-secret-value\n");
+ 
+   const status = hunch(["auth", "status", "--reporter", "json"], { config });
+   expect(status.status).toBe(0);
+   expect(status.stdout).not.toContain("ts-secret-value");
+-  expect(JSON.parse(status.stdout)).toMatchObject({ keys: { AI_GATEWAY_API_KEY: "missing", TYPESAFE_API_KEY: "stored" }, vercelProject: null });
++  expect(JSON.parse(status.stdout)).toMatchObject({ keys: { AI_GATEWAY_API_KEY: "missing", OPENROUTER_API_KEY: "stored" }, vercelProject: null });
+ 
+-  const pinned = hunch(["auth", "status", "--reporter", "json"], { config, env: { TYPESAFE_API_KEY: "from-shell" } });
+-  expect(JSON.parse(pinned.stdout).keys.TYPESAFE_API_KEY).toBe("environment");
++  const pinned = hunch(["auth", "status", "--reporter", "json"], { config, env: { OPENROUTER_API_KEY: "from-shell" } });
++  expect(JSON.parse(pinned.stdout).keys.OPENROUTER_API_KEY).toBe("environment");
+ 
+   expect(hunch(["auth", "logout"], { config }).status).toBe(0);
+   const after = hunch(["auth", "status"], { config });
+@@ -200,12 +200,12 @@ test("the SemIf install is remembered whole, so changing backend leaves no stale
+   saveSemifInstall({ SEMIF_PYTHON: "/venv/bin/python", SEMIF_BACKEND: "torch" }, path);
+   expect(readSemifInstall(path)).toEqual({ SEMIF_PYTHON: "/venv/bin/python", SEMIF_BACKEND: "torch" });
+   // A key stored alongside it is not disturbed by setting SemIf up.
+-  saveCredential("TYPESAFE_API_KEY", "k", path);
++  saveCredential("OPENROUTER_API_KEY", "k", path);
+   saveSemifInstall({ SEMIF_MODEL: "local/model" }, path);
+-  expect(readCredentials(path).TYPESAFE_API_KEY).toBe("k");
++  expect(readCredentials(path).OPENROUTER_API_KEY).toBe("k");
+   expect(removeSemifInstall(path)).toBe(true);
+   expect(readSemifInstall(path)).toBeNull();
+-  expect(readCredentials(path).TYPESAFE_API_KEY).toBe("k");
++  expect(readCredentials(path).OPENROUTER_API_KEY).toBe("k");
+ });
+ 
+ test("a stored SemIf setting only fills what this directory left unset", () => {
+diff --git i/packages/cli/test/find.test.ts w/packages/cli/test/find.test.ts
+index 359e9de..e1bbe33 100644
+--- i/packages/cli/test/find.test.ts
++++ w/packages/cli/test/find.test.ts
+@@ -85,7 +85,7 @@ test("with nobody signed in, find says how to sign in at once instead of reporti
+     const result = hunch(root, ["find", "Does this code discard a failed write?", "--mode", "condition", "--reporter", "json"]);
+     expect(result.status).toBe(2);
+     // The fixture names TypeSafe; with the Gateway the message is "No authentication provided".
+-    expect(result.stderr).toContain("needs TYPESAFE_API_KEY");
++    expect(result.stderr).toContain("needs OPENROUTER_API_KEY");
+     expect(result.stderr).toContain("hunch auth login");
+     // Not a report: a search that never ran has no result to mistake for "nothing found".
+     expect(result.stdout).toBe("");
+diff --git i/packages/cli/test/wizard.test.ts w/packages/cli/test/wizard.test.ts
+index 5ab9a0f..a98f298 100644
+--- i/packages/cli/test/wizard.test.ts
++++ w/packages/cli/test/wizard.test.ts
+@@ -105,7 +105,7 @@ test("a key already reachable by check is not asked for again", async () => {
+   expect(await askWizard(io, context({ keyPresent: true }))).toMatchObject({ key: { kind: "later" } });
+   expect(asked.some((q) => /key|provider/i.test(q))).toBe(false);
+   expect(existingKey(project({ ".env.local": "AI_GATEWAY_API_KEY=x\n" }), {})).toBe("AI_GATEWAY_API_KEY");
+-  expect(existingKey(project({ ".env": "export TYPESAFE_API_KEY=y\n" }), {})).toBe("TYPESAFE_API_KEY");
++  expect(existingKey(project({ ".env": "export OPENROUTER_API_KEY=y\n" }), {})).toBe("OPENROUTER_API_KEY");
+   expect(existingKey(project({ ".env.local": "AI_GATEWAY_API_KEY=\n" }), {})).toBeNull();
+   expect(existingKey(project(), { AI_GATEWAY_API_KEY: "from-env" })).toBe("AI_GATEWAY_API_KEY");
+ });
+@@ -143,8 +143,8 @@ test("the key is written owner-only to a git-ignored file, never to the committe
+   expect(statSync(path).mode & 0o077).toBe(0);
+   expect(readFileSync(join(root, ".gitignore"), "utf8")).toContain(".env.local");
+   // A second key appends; an existing name is never silently replaced.
+-  writeKey(root, "TYPESAFE_API_KEY", "ts-secret");
+-  expect(readFileSync(path, "utf8")).toBe("AI_GATEWAY_API_KEY=sk-secret\nTYPESAFE_API_KEY=ts-secret\n");
++  writeKey(root, "OPENROUTER_API_KEY", "ts-secret");
++  expect(readFileSync(path, "utf8")).toBe("AI_GATEWAY_API_KEY=sk-secret\nOPENROUTER_API_KEY=ts-secret\n");
+   expect(() => writeKey(root, "AI_GATEWAY_API_KEY", "other")).toThrow("already sets");
+   expect(readFileSync(path, "utf8")).toContain("sk-secret");
+   rmSync(root, { recursive: true, force: true });
+diff --git i/packages/core/src/jev.ts w/packages/core/src/jev.ts
+index 48e380c..fb55333 100644
+--- i/packages/core/src/jev.ts
++++ w/packages/core/src/jev.ts
+@@ -98,17 +98,17 @@ type GatewayAnswer =
+   | { type: "choice"; choice: string; probabilities?: Record<string, number> }
+   | { type: "score"; score: number; probabilities?: Record<string, number> };
+ 
+-/** TypeSafe's own REST API: POST https://api.typesafe.ai/v1/systemone. */
++/** TypeSafe's own REST API: POST https://openrouter.ai/api/alpha/systemone. */
+ export function typesafeClient(opts: { apiKey: string; baseUrl?: string; fetch?: typeof fetch }): JevClient {
+-  const base = opts.baseUrl ?? "https://api.typesafe.ai/v1";
++  const base = opts.baseUrl ?? "https://openrouter.ai/api/alpha";
+   const doFetch = opts.fetch ?? fetch;
+   return {
+     async evaluate(req) {
+-      const body = JSON.stringify({ model: req.model, state: req.state, questions: req.questions });
++      const body = JSON.stringify({ model: req.model.startsWith("jev-") ? "typesafe/jev-1.13" : req.model, state: req.state, questions: req.questions });
+       let lastErr: unknown;
+       const signal = req.signal ? AbortSignal.any([req.signal, AbortSignal.timeout(45_000)]) : AbortSignal.timeout(45_000);
+       for (let attempt = 0; attempt < 3; attempt++) {
+-        const res = await doFetch(`${base}/systemone`, {
++        const res = await doFetch(`${base}/decisions`, {
+           method: "POST",
+           signal,
+           headers: { authorization: `Bearer ${opts.apiKey}`, "content-type": "application/json" },
+@@ -186,7 +186,7 @@ export const OUTAGE_FAILURES = 8;
+  */
+ export function isAuthError(error: unknown): boolean {
+   const message = error instanceof Error ? error.message : String(error);
+-  return /No authentication provided|authentication failed|needs TYPESAFE_API_KEY|Invalid API key|HTTP 401|HTTP 403/i.test(message);
++  return /No authentication provided|authentication failed|needs OPENROUTER_API_KEY|Invalid API key|HTTP 401|HTTP 403/i.test(message);
+ }
+ 
+ /**
+diff --git i/packages/core/src/openrouter.ts w/packages/core/src/openrouter.ts
+new file mode 100644
+index 0000000..031025f
+--- /dev/null
++++ w/packages/core/src/openrouter.ts
+@@ -0,0 +1,20 @@
++import { readFileSync, statSync } from "node:fs";
++import { homedir } from "node:os";
++import { join } from "node:path";
++export function openRouterKey(): string | undefined {
++  if (process.env.OPENROUTER_API_KEY?.trim()) return process.env.OPENROUTER_API_KEY.trim();
++  if (!process.env.HOME) return undefined;
++  try {
++    const path = join(homedir(), ".config/siftr/.env");
++    if ((statSync(path).mode & 0o077) !== 0) return undefined;
++    const line = readFileSync(path, "utf8").split("\n").find(s => /^(?:export\s+)?OPENROUTER_API_KEY=/.test(s.trim()));
++    return line?.trim().replace(/^(?:export\s+)?OPENROUTER_API_KEY=/, "").trim().replace(/^["']|["']$/g, "") || undefined;
++  } catch { return undefined; }
++}
++export const openRouterFetch: typeof fetch = async (input, init) => {
++  const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
++  if (url.href !== "https://openrouter.ai/v1/systemone") throw new Error("OpenRouter decision transport refuses an unexpected destination");
++  const body = JSON.parse(String(init?.body));
++  if (!body.model || String(body.model).startsWith("jev-")) body.model = "typesafe/jev-1.13";
++  return fetch("https://openrouter.ai/api/alpha/decisions", {...init, body: JSON.stringify(body)});
++};
+diff --git i/packages/core/src/provider.ts w/packages/core/src/provider.ts
+index 6d75a0a..e369747 100644
+--- i/packages/core/src/provider.ts
++++ w/packages/core/src/provider.ts
+@@ -1,3 +1,4 @@
++import { openRouterKey } from "./openrouter.js";
+ import { gatewayClient, isExhaustedError, typesafeClient, type JevClient } from "./jev.js";
+ import { closeClient, semifClient, semifSettings, type ClosableClient, type SemifConfig } from "./semif.js";
+ 
+@@ -16,7 +17,7 @@ type ProviderChoice = { provider?: Provider; semif?: SemifConfig };
+  */
+ export function providerFor(cfg: ProviderChoice, env: Record<string, string | undefined> = process.env): Provider {
+   if (cfg.provider) return cfg.provider;
+-  if (env.TYPESAFE_API_KEY && !env.AI_GATEWAY_API_KEY) return "typesafe";
++  if ((env.OPENROUTER_API_KEY || openRouterKey()) && !env.AI_GATEWAY_API_KEY) return "typesafe";
+   // Only an explicit SemIf setup counts: it costs nothing to have installed, so it must not quietly
+   // replace a Gateway sign-in that is already working.
+   if (env.SEMIF_MODEL && !env.AI_GATEWAY_API_KEY) return "semif";
+@@ -30,8 +31,8 @@ export function clientFromEnv(
+   const provider = providerFor(cfg, env);
+   if (provider === "semif") return semifClient(semifSettings(cfg.semif, env));
+   if (provider === "typesafe") {
+-    const apiKey = env.TYPESAFE_API_KEY;
+-    if (!apiKey) throw new Error("provider = typesafe needs TYPESAFE_API_KEY");
++    const apiKey = env.OPENROUTER_API_KEY || openRouterKey();
++    if (!apiKey) throw new Error("provider = typesafe needs OPENROUTER_API_KEY");
+     return typesafeClient({ apiKey });
+   }
+   // No key check here: the AI SDK also authenticates through a linked Vercel project
+diff --git i/packages/core/src/schema.ts w/packages/core/src/schema.ts
+index 29fc313..48c2591 100644
+--- i/packages/core/src/schema.ts
++++ w/packages/core/src/schema.ts
+@@ -166,7 +166,7 @@ export const configSchema = z.strictObject({
+   /** TypeSafe model id (direct provider). The gateway currently serves `typesafe-ai/jev` only. */
+   model: z.string().default("jev-1.13.0"),
+   /**
+-   * Omit to use what the machine is signed in with: TypeSafe directly when `TYPESAFE_API_KEY` is
++   * Omit to use what the machine is signed in with: TypeSafe directly when `OPENROUTER_API_KEY` is
+    * set, SemIf when it alone is set up, otherwise the Gateway. Name one to hold every run to it.
+    */
+   provider: z.enum(["gateway", "typesafe", "semif"]).optional(),
+diff --git i/packages/core/test/provider.test.ts w/packages/core/test/provider.test.ts
+index 5782b99..065c304 100644
+--- i/packages/core/test/provider.test.ts
++++ w/packages/core/test/provider.test.ts
+@@ -5,21 +5,21 @@ import { parseConfig } from "../src/schema.js";
+ test("a config that names no provider uses the credentials this machine holds", () => {
+   const unset = parseConfig({}, "t");
+   // Someone who signed in with a TypeSafe key can review any repository, configured or not.
+-  expect(providerFor(unset, { TYPESAFE_API_KEY: "k" })).toBe("typesafe");
++  expect(providerFor(unset, { OPENROUTER_API_KEY: "k" })).toBe("typesafe");
+   // The hosted App and CI hold no TypeSafe key, so they stay on the Gateway as before.
+   expect(providerFor(unset, {})).toBe("gateway");
+   expect(providerFor(unset, { AI_GATEWAY_API_KEY: "g" })).toBe("gateway");
+   // With both keys, nothing changes for setups that predate this choice.
+-  expect(providerFor(unset, { AI_GATEWAY_API_KEY: "g", TYPESAFE_API_KEY: "k" })).toBe("gateway");
++  expect(providerFor(unset, { AI_GATEWAY_API_KEY: "g", OPENROUTER_API_KEY: "k" })).toBe("gateway");
+ });
+ 
+ test("a provider the config names is never overridden by what happens to be signed in", () => {
+   const gateway = parseConfig({ provider: "gateway" }, "t");
+-  expect(providerFor(gateway, { TYPESAFE_API_KEY: "k" })).toBe("gateway");
++  expect(providerFor(gateway, { OPENROUTER_API_KEY: "k" })).toBe("gateway");
+   const typesafe = parseConfig({ provider: "typesafe" }, "t");
+   expect(providerFor(typesafe, { AI_GATEWAY_API_KEY: "g" })).toBe("typesafe");
+   // Naming TypeSafe without its key is still an error to fix, not a silent switch to the Gateway.
+-  expect(() => clientFromEnv(typesafe, { AI_GATEWAY_API_KEY: "g" })).toThrow("TYPESAFE_API_KEY");
++  expect(() => clientFromEnv(typesafe, { AI_GATEWAY_API_KEY: "g" })).toThrow("OPENROUTER_API_KEY");
+ });
+ 
+ test("SemIf is chosen only when this machine set it up and nothing hosted is signed in", () => {
+@@ -28,14 +28,14 @@ test("SemIf is chosen only when this machine set it up and nothing hosted is sig
+   // An install that costs nothing to have must not take a working Gateway sign-in away.
+   expect(providerFor(unset, { SEMIF_MODEL: "Qwen/Qwen3.5-4B", AI_GATEWAY_API_KEY: "g" })).toBe("gateway");
+   // A TypeSafe key is a deliberate sign-in too, and predates this one.
+-  expect(providerFor(unset, { SEMIF_MODEL: "Qwen/Qwen3.5-4B", TYPESAFE_API_KEY: "k" })).toBe("typesafe");
++  expect(providerFor(unset, { SEMIF_MODEL: "Qwen/Qwen3.5-4B", OPENROUTER_API_KEY: "k" })).toBe("typesafe");
+   // Nothing set up: unchanged for the hosted App and CI.
+   expect(providerFor(unset, {})).toBe("gateway");
+ });
+ 
+ test("a config or a flag that names SemIf is obeyed, and needs no key at all", () => {
+   const semif = parseConfig({ provider: "semif" }, "t");
+-  expect(providerFor(semif, { AI_GATEWAY_API_KEY: "g", TYPESAFE_API_KEY: "k" })).toBe("semif");
++  expect(providerFor(semif, { AI_GATEWAY_API_KEY: "g", OPENROUTER_API_KEY: "k" })).toBe("semif");
+   // Building the client must not start a model: that happens on the first question.
+   expect(clientFromEnv(semif, {})).toHaveProperty("evaluate");
+ });
+diff --git i/skills/hunch/SKILL.md w/skills/hunch/SKILL.md
+index 48f3f1c..0559f23 100644
+--- i/skills/hunch/SKILL.md
++++ w/skills/hunch/SKILL.md
+@@ -193,3 +193,7 @@ Edit `hunch.config.ts` or `hunch.toml` directly; `init` only creates it. After e
+ | `.github/workflows/hunch.yml` | `init --target actions` | yes, for the Actions path |
+ | `.env.local` | the `init` wizard, when asked to keep the key in this project only | never; `init` adds it to `.gitignore` |
+ | `~/.config/hunch/credentials` | `auth login` and the `init` wizard | it is outside the repository; owner-only |
++
++## My Tools deployment profile
++
++This managed installation uses OPENROUTER_API_KEY and OpenRouter decisions. Reuse the shared credential; do not install a floating version or create per-project keys. Use --provider typesafe --no-fallback; typesafe is the upstream name of the direct route adapted to OpenRouter here. Project dependencies and gates are separate from installing this CLI.
+diff --git i/skills/hunch/examples/auth.md w/skills/hunch/examples/auth.md
+index 28d5233..5133c02 100644
+--- i/skills/hunch/examples/auth.md
++++ w/skills/hunch/examples/auth.md
+@@ -19,7 +19,7 @@ stdout:
+ 
+ ```text
+ AI_GATEWAY_API_KEY   not set
+-TYPESAFE_API_KEY     not set
++OPENROUTER_API_KEY   not set
+ Vercel project       none
+ SemIf                not set up
+ 
+@@ -79,7 +79,7 @@ stdout:
+ 
+ ```text
+ AI_GATEWAY_API_KEY   set, from ~/.config/hunch/credentials
+-TYPESAFE_API_KEY     not set
++OPENROUTER_API_KEY   not set
+ Vercel project       none
+ SemIf                not set up
+ ```
+@@ -102,7 +102,7 @@ stdout:
+   "credentialsFile": "~/.config/hunch/credentials",
+   "keys": {
+     "AI_GATEWAY_API_KEY": "stored",
+-    "TYPESAFE_API_KEY": "missing"
++    "OPENROUTER_API_KEY": "missing"
+   },
+   "vercelLinked": false,
+   "vercelProject": null,
