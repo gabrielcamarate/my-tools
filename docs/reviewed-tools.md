@@ -64,7 +64,11 @@ Benchmarks antigos não aprovam este perfil. Custos impressos podem ser estimati
 
 Skills oficiais vinculadas à fonte no armazenamento upstream, fora do my-skills: `jev-axi`, `adopting-jev`, `jev-recipes`, `jev-spec-init`, `jev-spec-fix`, `hunch`, `snifftest`. Links individuais em `~/.agents/skills` e `~/.claude/skills` acompanham atualização/rollback. As outras cinco não fornecem SKILL.md nesta revisão.
 
-O lote funciona por CLI; nenhum MCP foi registrado no host. Axi tem supervisão/safety opcionais, Spec/Sniff têm hooks Git opcionais. Não foram habilitados: instalar não concede supervisão de sessões ou criação de gates em todos os projetos. Seleção pelas skills é contextual, sem interceptação global de ferramentas.
+O lote funciona por CLI; nenhum MCP foi registrado no host. Axi tem supervisão/safety opcionais, Spec/Sniff têm hooks Git opcionais. Não foram habilitados: instalar não concede supervisão de sessões ou criação de gates em todos os projetos. Desde 03/10/2026, as skills pessoais exigem chamada oficial nos gatilhos compatíveis
+da fase experimental: [política de uso](https://github.com/gabrielcamarate/my-skills/blob/main/docs/tool-routing.md).
+É uma obrigação nas instruções, sem interceptação global de ferramentas. Ausência de
+entrada/configuração/autorização ou falha real exige dispensa/fallback concreto, sem
+impedir a continuação da tarefa. Não obriga chamar todas as ferramentas em todo pedido.
 
 Cloud: utilizável pelo shell após instalação destas revisões, runtimes/dependências, rede/proxy/CA, binding da chave e instruções carregadas. Ter os três repositórios não instala binários nem atualiza um ambiente aberto. Os ambientes publicados anteriormente precisam incluir estes novos nomes no script de instalação; não foram alterados nesta etapa. Instalação local não prova catálogo ou execução Cloud.
 
@@ -75,3 +79,15 @@ As dez chamadas reais sintéticas pelo OpenRouter passaram: cobrança classifica
 Os checks do controlador cobrem update/rollback das dez interfaces, conflitos externos e compensação de falhas. O piloto não prova acurácia geral, ganho de tempo/tokens, confiabilidade em produção ou precisão de estilo em português. DocJev split e Hunch review requerem avaliação representativa adicional. Nenhum coletor automático, instrumentação de serviços ou envio de projetos privados foi habilitado.
 
 Validação final: 90 testes do controlador, 7 testes do instalador de skills e 23 skills pessoais válidas. Suites upstream passaram nas dez revisões adaptadas; testes opt-in/ignorados pelo upstream foram preservados. Recipes: 6.200 testes de receitas e 177 de tooling, com dependência do exemplo vinculada à fonte revisada. Veja [revisões, patches e contagens](../benchmarks/results/batch-2026-10-02/validation.json). O piloto real pode ser repetido com `python3 benchmarks/run-reviewed.py`; ele exige a chave compartilhada e envia somente fixtures sintéticas.
+
+## Adoção obrigatória e próxima tarefa local
+
+O agente registra gatilho, interface/chamada, resultado ou falha e dispensa/fallback
+no checkpoint existente, com resumo curto na entrega. Disponibilidade ou leitura
+de skill não contam como execução. Sem baseline comparável, ganho permanece
+desconhecido. Não foram criados hooks, gates ou coletores nesta mudança de instruções.
+
+No localhost, links válidos de my-skills apontam à fonte canônica e acompanham seu
+conteúdo; uma tarefa nova deve carregar as skills atualizadas. Sessões já abertas
+podem manter instruções antigas. Outros computadores/Cloud precisam atualizar seu
+checkout e preparar interfaces; push no GitHub não comprova atualização do runtime.

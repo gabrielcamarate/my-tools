@@ -197,3 +197,12 @@ Versões fixadas e interface upstream, com a chave OpenRouter compartilhada. [Co
 | [hunch](https://github.com/Kelbie/hunch) | Busca comportamento e revisa diffs contra regras |
 | [snifftest](https://github.com/DanRWilloughby/snifftest) | Verifica texto contra regras de estilo |
 | [semdecide](https://github.com/sharziki/semdecide) | Classifica e filtra texto ou JSONL |
+
+## Fase experimental de uso: 03/10/2026
+
+As skills pessoais do [my-skills](https://github.com/gabrielcamarate/my-skills/blob/main/docs/tool-routing.md)
+agora exigem executar a ferramenta oficial ao ocorrer um gatilho compatível, com
+chamada/resultado ou dispensa concreta e fallback registrados na tarefa. Ler a skill
+não conta como uso. É uma regra de instruções para medir adoção, não interceptação
+global ou prova de economia. Gates finais, autorização de dados e recuperação
+continuam obrigatórios. Não foram alterados instalação, hooks ou credencial.
