@@ -79,3 +79,33 @@ my-tools rollback canny
 ```
 
 CLI estável acompanha revisão aceita; hooks por nome continuam no mesmo entrypoint. Sessões já abertas precisam confirmar carregamento da nova revisão. Alterações de definição do hook exigem nova revisão/confiança pelo cliente. Rollback exige uma versão anterior aceita; esta é a primeira instalação de Canny.
+
+
+## Verificação proporcional de geradores locais
+
+Em 02/10/2026, uma tarefa só de planta SVG/PDF executou indevidamente a suíte do
+Rakmma por seguir a sugestão genérica de checks do hook. A sugestão não relaciona
+comandos aos paths alterados. Canny não certifica renderização/medidas de uma planta.
+
+Correção local autorizada: `.canny.json` no checkout principal do Rakmma, com
+`ignore` somente para `backups/epr-plant/add-roads-r11.py` e
+`backups/epr-plant/add-crossings-r12.py`, incluindo paths absolutos pelo prefixo
+`(^|/)`. Configuração revisada e aceita pela CLI nativa `canny trust`; nenhum hook
+ou código upstream foi alterado, nenhum padrão `verify` foi substituído.
+A exceção retira desses dois paths o gate genérico e o envio de edições ao Jev;
+não valida os scripts ou o artefato. As skills exigem execução do gerador e
+inspeção de exportação, conteúdo, medidas e preservação da planta. Não ignorar
+`backups/` inteiro ou toda extensão Python. Outros scripts seguem protegidos.
+
+Teste offline reproduzível: `node benchmarks/run-canny-artifact-scope.mjs`.
+PASS: config não confiada bloqueia; os dois geradores revisados dispensam suíte
+da aplicação; app sem check ou com check falhando bloqueia; app com check real
+passando libera; alteração mista bloqueia; gerador desconhecido/Python comum
+bloqueiam. Zero chamadas ao provedor e cleanup da fixture concluído. Isso prova
+o gate/config, não o QA da planta real ou redução de duração de tarefas.
+
+A configuração é por checkout e confiança por conteúdo/path. Ela não é replicada
+silenciosamente para worktrees ou outros projetos. Novas tarefas consomem as
+skills compartilhadas; configurações adicionais exigem escopo/paths revisados.
+Rollback local: remover apenas a entrada exata de ignore revisada, preservar outras
+opções e rever a confiança. Histórico/ledger e hooks de terceiros permanecem intactos.
