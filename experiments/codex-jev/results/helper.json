@@ -1,0 +1,67 @@
+[
+  {
+    "live": false,
+    "recoverable_source": false,
+    "returncode": 1,
+    "seconds": 0.012,
+    "input_chars": 584200,
+    "missing_credential_fallback": true,
+    "test_exit": 0
+  },
+  {
+    "live": true,
+    "recoverable_source": false,
+    "returncode": 0,
+    "seconds": 0.584,
+    "input_chars": 584200,
+    "output_chars": 3550,
+    "retained_items": 11,
+    "original_items": 59,
+    "diagnostic": "100% reduction; 1 kept, 0 results truncated, 24 calls dropped, 0 pinned; 1 Jev request(s) in 560ms",
+    "requirements_preserved": true,
+    "paired_calls": true,
+    "test_exit": 0
+  },
+  {
+    "live": true,
+    "recoverable_source": false,
+    "returncode": 0,
+    "seconds": 0.396,
+    "input_chars": 584200,
+    "output_chars": 3550,
+    "retained_items": 11,
+    "original_items": 59,
+    "diagnostic": "100% reduction; 1 kept, 0 results truncated, 24 calls dropped, 0 pinned; 1 Jev request(s) in 372ms",
+    "requirements_preserved": true,
+    "paired_calls": true,
+    "test_exit": 0
+  },
+  {
+    "live": true,
+    "recoverable_source": false,
+    "returncode": 0,
+    "seconds": 0.383,
+    "input_chars": 584200,
+    "output_chars": 3550,
+    "retained_items": 11,
+    "original_items": 59,
+    "diagnostic": "100% reduction; 1 kept, 0 results truncated, 24 calls dropped, 0 pinned; 1 Jev request(s) in 360ms",
+    "requirements_preserved": true,
+    "paired_calls": true,
+    "test_exit": 0
+  },
+  {
+    "live": true,
+    "recoverable_source": true,
+    "returncode": 0,
+    "seconds": 0.73,
+    "input_chars": 582682,
+    "output_chars": 1747,
+    "retained_items": 9,
+    "original_items": 59,
+    "diagnostic": "100% reduction; 0 kept, 0 results truncated, 25 calls dropped, 0 pinned; 1 Jev request(s) in 696ms",
+    "requirements_preserved": false,
+    "paired_calls": true,
+    "test_exit": 0
+  }
+]

@@ -215,3 +215,14 @@ autorizar o histórico inteiro elegível. Smokes isolados usam Jev Browser ofici
 suítes Playwright existentes continuam gates independentes. Ver
 [aceitação local](docs/local-adoption.md). Pruner reduz saída de comandos, não
 substitui a compactação de conversa do Codex.
+
+## Laboratório opcional: compactação Codex com Jev
+
+O [laboratório isolado](experiments/codex-jev/README.md) avalia um fork do motor
+Codex, com origem/SHA fixados, patch OpenRouter e comparação do mesmo binário
+com Jev ligado/desligado. Não substitui o `codex` instalado, não registra hooks
+e não ativa compactação nas conversas normais. Não faz parte de `install/update
+--all`: sua compatibilidade é a do motor, não a de uma CLI/plugin comum.
+Resultados do helper e do motor têm evidências separadas; o backend sintético
+não comprova latência nem qualidade real do ChatGPT. A skill `gabriel-reflect`
+aponta para a avaliação somente quando esse experimento for autorizado.

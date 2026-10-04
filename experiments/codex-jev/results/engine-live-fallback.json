@@ -1,0 +1,13 @@
+{
+  "mode": "missing-key",
+  "engine_compaction_completed": true,
+  "native_mock_calls": null,
+  "compaction_seconds": 7.689,
+  "continuation_answer": "ROUNDING=half-up rounding; LIMIT=125",
+  "forwarded_request_chars": [],
+  "backend": "real ChatGPT",
+  "model": "gpt-6-sol",
+  "compaction_response_ids_present": [
+    true
+  ]
+}

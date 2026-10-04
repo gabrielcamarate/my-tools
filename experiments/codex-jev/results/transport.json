@@ -1,0 +1,32 @@
+[
+  {
+    "case": "network",
+    "passed": true,
+    "returncode": 1
+  },
+  {
+    "case": "malformed",
+    "passed": true,
+    "returncode": 1
+  },
+  {
+    "case": "http-error",
+    "passed": true,
+    "returncode": 1
+  },
+  {
+    "case": "invalid-probability",
+    "passed": true,
+    "returncode": 1
+  },
+  {
+    "case": "keep-all",
+    "passed": true,
+    "returncode": 3
+  },
+  {
+    "case": "select",
+    "passed": true,
+    "returncode": 0
+  }
+]

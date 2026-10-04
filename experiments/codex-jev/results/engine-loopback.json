@@ -1,0 +1,49 @@
+[
+  {
+    "mode": "baseline",
+    "engine_compaction_completed": true,
+    "native_mock_calls": 1,
+    "compaction_seconds": 0.044,
+    "continuation_answer": "CONTINUATION_PASS",
+    "forwarded_request_chars": [
+      217,
+      666,
+      217,
+      183634,
+      1066,
+      46538
+    ],
+    "backend": "synthetic loopback; timings are not real ChatGPT compaction timings"
+  },
+  {
+    "mode": "jev",
+    "engine_compaction_completed": true,
+    "native_mock_calls": 0,
+    "compaction_seconds": 0.712,
+    "continuation_answer": "CONTINUATION_PASS",
+    "forwarded_request_chars": [
+      217,
+      666,
+      217,
+      1081,
+      46770
+    ],
+    "backend": "synthetic loopback; timings are not real ChatGPT compaction timings"
+  },
+  {
+    "mode": "missing-key",
+    "engine_compaction_completed": true,
+    "native_mock_calls": 1,
+    "compaction_seconds": 0.061,
+    "continuation_answer": "CONTINUATION_PASS",
+    "forwarded_request_chars": [
+      217,
+      666,
+      217,
+      183634,
+      1066,
+      46538
+    ],
+    "backend": "synthetic loopback; timings are not real ChatGPT compaction timings"
+  }
+]

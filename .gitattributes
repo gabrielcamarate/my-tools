@@ -1,2 +1,3 @@
 # Unified diffs contain significant single-space context markers.
 patches/*.patch -whitespace
+experiments/**/*.patch -whitespace

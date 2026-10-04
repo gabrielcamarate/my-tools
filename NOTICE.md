@@ -40,3 +40,11 @@ hunch: https://github.com/Kelbie/hunch.git, licença MIT, revisão `c2c680ed2c12
 snifftest: https://github.com/DanRWilloughby/snifftest.git, licença MIT, revisão `240653e2b082c114c38fed50a42e7eb311e21219`. Patch documentado em `patches/snifftest-openrouter.patch`; fonte/skills/licença permanecem upstream no armazenamento local.
 
 semdecide: https://github.com/sharziki/semdecide.git, licença MIT, revisão `33cf5c03c50e02e59df3f3ea81f0650f6b791545`. Patch documentado em `patches/semdecide-openrouter.patch`; fonte/skills/licença permanecem upstream no armazenamento local.
+
+## Optional Codex Jev lab
+
+The isolated compaction experiment references AyushChauhan9389/codex-jev at
+`eed01388e78d646ea0e2bc694270820a09673ce5` (Apache-2.0), based on OpenAI Codex
+rust-v0.159.0. Its vendored fast-jev-compaction helper retains the MIT license.
+My Tools stores only provider/build patches, launch safeguards and synthetic
+acceptance tests; upstream source and binaries are obtained separately.

@@ -1,0 +1,72 @@
+diff --git i/jev/codex-jev-compact.ts w/jev/codex-jev-compact.ts
+index ff263cb..2743554 100755
+--- i/jev/codex-jev-compact.ts
++++ w/jev/codex-jev-compact.ts
+@@ -4,7 +4,7 @@
+ // stdout: {"keep": [index, ...], "replace": {"index": "truncated output"}}.
+ // Exits 3 when pruning would not cut enough; any other failure exits 1. Either way Codex
+ // falls back to its regular compaction.
+-import { readFileSync } from 'node:fs';
++import { readFileSync, statSync } from 'node:fs';
+ import { homedir } from 'node:os';
+ import { join } from 'node:path';
+ import { compactMessages, reductionRatio, type Message } from './lib/index.ts';
+@@ -15,14 +15,22 @@ type Item = { type: string; [key: string]: any };
+ type Call = { id: string; tool: string; input: Record<string, unknown> };
+ 
+ function apiKey(): string | undefined {
+-  if (process.env.TYPESAFE_API_KEY) return process.env.TYPESAFE_API_KEY;
+-  // Same key the Claude Code plugin uses.
++  if (process.env.OPENROUTER_API_KEY !== undefined) return process.env.OPENROUTER_API_KEY || undefined;
++  // Shared native credential: never duplicate it in this lab or read project .env files.
+   try {
+-    const settings = JSON.parse(readFileSync(join(homedir(), '.claude/settings.json'), 'utf8'));
+-    return settings.env?.TYPESAFE_API_KEY;
+-  } catch {
+-    return undefined;
+-  }
++    const path = join(homedir(), '.config', 'siftr', '.env');
++    const info = statSync(path);
++    if (!info.isFile() || (info.mode & 0o077) !== 0) return undefined;
++    const lines = readFileSync(path, 'utf8').split('\n');
++    for (const line of lines) {
++      const match = /^\s*(?:export\s+)?OPENROUTER_API_KEY\s*=\s*(.*?)\s*$/.exec(line);
++      if (!match) continue;
++      const value = match[1];
++      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) return value.slice(1, -1) || undefined;
++      return value.split(/\s+#/)[0].trim() || undefined;
++    }
++  } catch { /* Missing credentials fall back to native compaction. */ }
++  return undefined;
+ }
+ 
+ function textOf(content: unknown): string {
+@@ -100,7 +108,14 @@ function toMessages(items: Item[]): Message[] {
+ 
+ const items: Item[] = JSON.parse(readFileSync(0, 'utf8'));
+ const messages = toMessages(items);
+-const result = await compactMessages(messages, { apiKey: apiKey() });
++const key = apiKey();
++if (!key) { console.error('OpenRouter credential unavailable'); process.exit(1); }
++const result = await compactMessages(messages, {
++  apiKey: key,
++  baseUrl: 'https://openrouter.ai/api/alpha/decisions',
++  model: 'typesafe/jev-1.13',
++  fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(10_000) }),
++});
+ const ratio = reductionRatio(result);
+ const { stats } = result;
+ const summary = `${Math.round(ratio * 100)}% reduction; ${stats.kept} kept, ${stats.resultsDropped} results truncated, ${stats.callsDropped} calls dropped, ${stats.pinned} pinned; ${stats.requests} Jev request(s) in ${stats.ms}ms`;
+diff --git i/jev/lib/request.ts w/jev/lib/request.ts
+index db030b0..6d987f4 100644
+--- i/jev/lib/request.ts
++++ w/jev/lib/request.ts
+@@ -72,7 +72,7 @@ export function noulAnswer(
+     !answer ||
+     !('noul' in answer) ||
+     typeof answer.noul !== 'number' ||
+-    !Number.isFinite(answer.noul)
++    !Number.isFinite(answer.noul) || answer.noul < 0 || answer.noul > 1
+   ) {
+     throw new Error(`Invalid Jev answer for ${name}`);
+   }

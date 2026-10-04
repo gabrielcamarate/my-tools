@@ -1,0 +1,80 @@
+[
+  {
+    "mode": "baseline",
+    "engine_compaction_completed": true,
+    "native_mock_calls": null,
+    "compaction_seconds": 8.069,
+    "continuation_answer": "ROUNDING=half-up; LIMIT=125",
+    "forwarded_request_chars": [],
+    "backend": "real ChatGPT",
+    "model": "gpt-6-sol",
+    "compaction_response_ids_present": [
+      true
+    ]
+  },
+  {
+    "mode": "jev",
+    "engine_compaction_completed": true,
+    "native_mock_calls": null,
+    "compaction_seconds": 1.379,
+    "continuation_answer": "ROUNDING=half-up; LIMIT=125",
+    "forwarded_request_chars": [],
+    "backend": "real ChatGPT",
+    "model": "gpt-6-sol",
+    "compaction_response_ids_present": [
+      false
+    ]
+  },
+  {
+    "mode": "baseline",
+    "engine_compaction_completed": true,
+    "native_mock_calls": null,
+    "compaction_seconds": 8.091,
+    "continuation_answer": "ROUNDING=half-up; LIMIT=125",
+    "forwarded_request_chars": [],
+    "backend": "real ChatGPT",
+    "model": "gpt-6-sol",
+    "compaction_response_ids_present": [
+      true
+    ]
+  },
+  {
+    "mode": "jev",
+    "engine_compaction_completed": true,
+    "native_mock_calls": null,
+    "compaction_seconds": 1.554,
+    "continuation_answer": "ROUNDING=half-up; LIMIT=125",
+    "forwarded_request_chars": [],
+    "backend": "real ChatGPT",
+    "model": "gpt-6-sol",
+    "compaction_response_ids_present": [
+      false
+    ]
+  },
+  {
+    "mode": "baseline",
+    "engine_compaction_completed": true,
+    "native_mock_calls": null,
+    "compaction_seconds": 12.437,
+    "continuation_answer": "ROUNDING=half-up; LIMIT=125",
+    "forwarded_request_chars": [],
+    "backend": "real ChatGPT",
+    "model": "gpt-6-sol",
+    "compaction_response_ids_present": [
+      true
+    ]
+  },
+  {
+    "mode": "jev",
+    "engine_compaction_completed": true,
+    "native_mock_calls": null,
+    "compaction_seconds": 1.388,
+    "continuation_answer": "ROUNDING=half-up; LIMIT=125",
+    "forwarded_request_chars": [],
+    "backend": "real ChatGPT",
+    "model": "gpt-6-sol",
+    "compaction_response_ids_present": [
+      false
+    ]
+  }
+]
