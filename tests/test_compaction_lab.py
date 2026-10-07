@@ -8,7 +8,7 @@ class LabIsolationTests(unittest.TestCase):
   self.root=Path(self.tmp.name);self.home=self.root/'personal';self.home.mkdir()
   (self.home/'.codex').mkdir();(self.home/'.codex/config.toml').write_text('personal sentinel')
   self.source=self.root/'source';binary=self.source/'target/release/codex';binary.parent.mkdir(parents=True)
-  binary.write_text('#!/usr/bin/env python3\nimport os,json,sys\nprint(json.dumps({"home":os.environ["HOME"],"codex_home":os.environ["CODEX_HOME"],"helper":os.environ.get("CODEX_JEV_COMPACT"),"thread":os.environ.get("CODEX_THREAD_ID"),"args":sys.argv[1:]}))\n');binary.chmod(0o700)
+  binary.write_text('#!/usr/bin/env python3\nimport os,json,sys\nfrom pathlib import Path\nassert Path(os.environ["CODEX_HOME"]).is_dir(), "Missing lab CODEX_HOME at startup"\nprint(json.dumps({"home":os.environ["HOME"],"codex_home":os.environ["CODEX_HOME"],"helper":os.environ.get("CODEX_JEV_COMPACT"),"thread":os.environ.get("CODEX_THREAD_ID"),"args":sys.argv[1:]}))\n');binary.chmod(0o700)
   self.env={**os.environ,'HOME':str(self.home),'CODEX_HOME':str(self.home/'.codex'),'CODEX_JEV_COMPACT':'untrusted','CODEX_THREAD_ID':'personal-thread','OPENROUTER_API_KEY':''}
  def run_lab(self,home,mode='baseline'):
   return subprocess.run(['python3',str(RUN),'--source',str(self.source),'--home',str(home),'--mode',mode,'--','--version'],env=self.env,text=True,capture_output=True)

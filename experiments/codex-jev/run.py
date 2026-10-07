@@ -22,7 +22,9 @@ if not binary.is_file():p.error('Build the separate engine first; installed Code
 args=a.arguments
 if args and args[0]=='--':args=args[1:]
 if not args:p.error('Provide explicit Codex arguments after --')
-env={**os.environ,'CODEX_HOME':str(home/'codex'),'HOME':str(home)}
+codex_home=home/'codex'
+codex_home.mkdir(parents=True,exist_ok=True,mode=0o700)
+env={**os.environ,'CODEX_HOME':str(codex_home),'HOME':str(home)}
 # HOME isolates personal skills, other agent configuration and cache paths.
 # An explicitly supplied provider credential is inherited; never copied to disk.
 for name in ('CODEX_JEV_COMPACT','CODEX_THREAD_ID','CODEX_CLI_PATH','OPENAI_API_KEY','TYPESAFE_API_KEY'):
