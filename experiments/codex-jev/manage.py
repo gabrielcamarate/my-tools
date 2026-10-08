@@ -20,12 +20,26 @@ HERE = Path(__file__).resolve().parent
 VERSION = re.compile(r"^codex-cli (\d+\.\d+\.\d+(?:-[a-z0-9.]+)?)$")
 
 
-def patch_signature():
+def patch_signature(variant='integration.patch'):
     result = hashlib.sha256()
-    for name in ('integration.patch', 'openrouter.patch', 'rust-1.98-build.patch', 'manifest.json'):
+    for name in (variant, 'openrouter.patch', 'rust-1.98-build.patch', 'manifest.json'):
         result.update((HERE / name).read_bytes())
     result.update(b'release-no-lto; strip-debug-v2; helper-no-project-config-v1')
     return result.hexdigest()
+
+
+def integration_variant(source, require_source=False):
+    path = source / 'codex-rs/core/src/compact_remote_v2.rs'
+    if not path.exists() and not require_source:
+        return 'integration.patch'
+    text = path.read_text()
+    match = re.search(r'async fn run_remote_compact_task_inner_impl\((.*?)\) -> CodexResult<\(\)>', text, re.S)
+    signature = match.group(1) if match else ''
+    if 'replacement_step_context:' in signature and 'world_state:' in signature:
+        return 'integration.patch'
+    if 'fallback_step_context:' in signature and 'initial_context_injection:' in signature:
+        return 'integration-alpha.patch'
+    raise RuntimeError('Unrecognized compaction API; candidate remains inactive')
 
 
 def run(args, **kwargs):
@@ -102,7 +116,7 @@ def atomic_json(path, data):
 def matches(record, binary, check_desktop=True):
     if not record or record.get('official_sha256') != digest(binary) or record.get('version') != version(binary):
         return False
-    if record.get('patchset') != patch_signature():
+    if record.get('patchset') != patch_signature(record.get('integration_variant', 'integration.patch')):
         return False
     host = binary.parent / 'codex-code-mode-host'
     if record.get('official_host_sha256') and (not host.is_file() or digest(host) != record['official_host_sha256']):
@@ -159,7 +173,8 @@ def validate(source, binary):
 def accept(state, target, source, binary):
     # Fresh installed identity readback after validation; do not accept a moving target.
     before = (version(binary), digest(binary))
-    patchset = patch_signature()
+    variant = integration_variant(source)
+    patchset = patch_signature(variant)
     bundle_hash = desktop_interface(binary) if target == 'desktop' else None
     files = ['target/release/codex', 'target/release/codex-code-mode-host', 'lab-runtime/node_modules/@oven/bun-linux-x64/bin/bun', 'jev/codex-jev-compact.ts']
     files.extend(str(p.relative_to(source)) for p in sorted((source / 'jev/lib').rglob('*')) if p.is_file())
@@ -173,13 +188,13 @@ def accept(state, target, source, binary):
         raise RuntimeError('Desktop package changed during validation')
     if any(digest(source / p) != expected for p, expected in hashes.items()):
         raise RuntimeError('Candidate runtime changed during validation')
-    if patch_signature() != patchset:
+    if patch_signature(variant) != patchset:
         raise RuntimeError('Maintenance patch changed during validation')
     records = load(state)
     previous = records.get(target)
     official_host = binary.parent / 'codex-code-mode-host'
     commit = run(['git', 'rev-parse', 'HEAD'], cwd=source, capture_output=True).stdout.strip() if (source / '.git').is_dir() else None
-    records[target] = {'version': before[0], 'official_sha256': before[1], 'official_host_sha256': digest(official_host) if official_host.is_file() else None, 'desktop_bundle_sha256': bundle_hash, 'source': str(source), 'upstream_commit': commit, 'patchset': patch_signature(), 'files': hashes, 'accepted_at': int(time.time()), 'validation': 'schema parity, provider failure contracts, synthetic replacement/fallback/continuation', 'live_acceptance': False}
+    records[target] = {'version': before[0], 'official_sha256': before[1], 'official_host_sha256': digest(official_host) if official_host.is_file() else None, 'desktop_bundle_sha256': bundle_hash, 'source': str(source), 'upstream_commit': commit, 'integration_variant': variant, 'patchset': patchset, 'files': hashes, 'accepted_at': int(time.time()), 'validation': 'schema parity, provider failure contracts, synthetic replacement/fallback/continuation', 'live_acceptance': False}
     if previous:
         atomic_json(state / f'previous-{target}.json', previous)
     atomic_json(state / 'accepted.json', records)
@@ -231,15 +246,17 @@ def prepare(state, target):
         return
     target_version = version(binary)
     bundle_hash = desktop_interface(binary) if target == 'desktop' else ''
-    key = target_version + '-' + patch_signature()[:12] + '-' + digest(binary)[:8] + ('-' + bundle_hash[:8] if bundle_hash else '')
+    catalog = hashlib.sha256((patch_signature() + patch_signature('integration-alpha.patch')).encode()).hexdigest()
+    key = target_version + '-' + catalog[:12] + '-' + digest(binary)[:8] + ('-' + bundle_hash[:8] if bundle_hash else '')
     source = state / 'versions' / key
     # Never alter an existing checkout or accepted engine in place.
     if source.exists():
         raise RuntimeError('Candidate directory already exists; inspect the failed build before retrying')
     source.parent.mkdir(parents=True, exist_ok=True)
     run(['git', 'clone', '--depth', '1', '--branch', 'rust-v' + target_version, 'https://github.com/openai/codex.git', source])
-    run(['git', 'apply', '--check', HERE / 'integration.patch'], cwd=source)
-    run(['git', 'apply', HERE / 'integration.patch'], cwd=source)
+    variant = integration_variant(source, require_source=True)
+    run(['git', 'apply', '--check', HERE / variant], cwd=source)
+    run(['git', 'apply', HERE / variant], cwd=source)
     fetch_helper(source)
     chatgpt_crate = source / 'codex-rs/chatgpt/src/lib.rs'
     if '#![recursion_limit = "256"]' not in chatgpt_crate.read_text():

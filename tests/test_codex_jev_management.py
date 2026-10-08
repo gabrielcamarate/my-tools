@@ -198,6 +198,20 @@ class ManagedEngineTests(unittest.TestCase):
         self.assertEqual(packages[1]['version'], '0.0.0')
         self.assertEqual(packages[1]['checksum'], 'sentinel')
 
+    def test_patch_selection_uses_actual_api_and_refuses_unknown_layout(self):
+        path = self.source / 'codex-rs/core/src/compact_remote_v2.rs'
+        path.parent.mkdir(parents=True)
+        for parameters, expected in (
+            ('replacement_step_context: Context, world_state: World', 'integration.patch'),
+            ('fallback_step_context: Context, initial_context_injection: Injection', 'integration-alpha.patch'),
+        ):
+            with self.subTest(expected=expected):
+                path.write_text('async fn run_remote_compact_task_inner_impl(' + parameters + ') -> CodexResult<()> {}')
+                self.assertEqual(manager.integration_variant(self.source, require_source=True), expected)
+        path.write_text('async fn run_remote_compact_task_inner_impl(new_protocol: Protocol) -> CodexResult<()> {}')
+        with self.assertRaisesRegex(RuntimeError, 'Unrecognized compaction API'):
+            manager.integration_variant(self.source, require_source=True)
+
     def test_cli_failure_does_not_skip_desktop_update(self):
         calls = []
         def prepare(_state, target):

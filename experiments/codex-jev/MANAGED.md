@@ -52,6 +52,9 @@ pacote. A tag é `rust-v<VERSAO>`, inclusive pré-releases. Obtém o helper da r
 fixada do fork original e aplica o patch OpenRouter revisado. As versões de
 pacotes locais no lockfile da release podem precisar normalização de 0.0.0 para
 a versão workspace; versões/checksums/dependências externos não são alterados.
+O adaptador é selecionado pela assinatura real da API de compactação: há versões
+para baseline obrigatório e opcional. Layout desconhecido é recusado antes do
+build. O CLI validado não é invalidado apenas por adicionar outro adaptador.
 Uma atualização apenas do renderer, com motor e auxiliar idênticos, revalida o
 bundle e reutiliza o executável aceito, sem recompilar o Codex.
 
