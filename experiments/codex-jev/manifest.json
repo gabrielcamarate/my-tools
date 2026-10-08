@@ -27,5 +27,13 @@
     "live_fallback_runs": 1,
     "upstream_format": "passed",
     "rust_scoped_tests": "7 passed, 0 skipped (just test -p codex-chatgpt --release)"
+  },
+  "code_mode_host": {
+    "upstream": "https://github.com/openai/codex/releases/tag/rust-v0.159.0",
+    "version": "0.159.0",
+    "asset": "codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz",
+    "archive_sha256": "f9d22969e793d7320f9ca0c2c0e0d0ec65400ac755ce20b809b64369985be947",
+    "binary_sha256": "160c7ea08738447582821fbb2611ee016d6dd628853401bbc441767cb4e95ef8",
+    "validation": "stdio handshake, session open, JavaScript result 42 and nested shell pwd passed offline"
   }
 }

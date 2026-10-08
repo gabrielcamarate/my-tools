@@ -78,6 +78,25 @@ de abrir uma sessão. Compilar só `codex` não prepara esse runtime. Depois de
 completar uma instalação existente, encerre e retome o CLI experimental para
 recriar o runtime de ferramentas; a autenticação isolada permanece no HOME do lab.
 
+Em 07/10/2026, compilar o auxiliar dessa revisão falhou porque o arquivo V8
+150.4.0 solicitado pelo build retornou HTTP 404. A alternativa validada é o
+**auxiliar oficial OpenAI da mesma versão 0.159.0**, sem modificar o fork ou a
+compactação. Para Linux x86_64, depois de compilar o engine:
+
+```bash
+curl -fL --max-time 90 -o /caminho/codex-jev-lab/lab-runtime/code-mode-host-0.159.0.tar.gz https://github.com/openai/codex/releases/download/rust-v0.159.0/codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz
+```
+
+Antes de extrair, compare o SHA-256 do arquivo com
+`f9d22969e793d7320f9ca0c2c0e0d0ec65400ac755ce20b809b64369985be947`,
+registrado na release oficial e em `manifest.json`. Extraia somente o membro
+`codex-code-mode-host-x86_64-unknown-linux-musl`, instale como
+`target/release/codex-code-mode-host` e dê permissão de execução. Não substitua um
+auxiliar existente sem revisar sua origem. O SHA-256 do executável validado é
+`160c7ea08738447582821fbb2611ee016d6dd628853401bbc441767cb4e95ef8`.
+Handshake STDIO, abertura de sessão, execução JavaScript e chamada delegada de
+`pwd` passaram sem modelo, rede de inferência ou alteração de projeto consumidor.
+
 O helper usa o binário Bun do pacote opcional `@oven/bun-linux-x64`, dispensando
 postinstall. Não rode o launcher `.desktop` upstream durante esta avaliação.
 O Rust usado no laboratório está registrado no manifesto; o upstream pede 1.95.0.
