@@ -52,7 +52,7 @@ index b5944e3..9c2aa16 100644
 +sends the session history to this provider: use it only where that history is
 +authorized for external processing.
 diff --git i/hooks/fast-jev.ts w/hooks/fast-jev.ts
-index cd894e2..4b608b0 100644
+index cd894e2..423cadd 100644
 --- i/hooks/fast-jev.ts
 +++ w/hooks/fast-jev.ts
 @@ -9,7 +9,7 @@ import type {
@@ -98,11 +98,25 @@ index cd894e2..4b608b0 100644
    const result = await compact(messages, jevAsker(fetchFn, config.apiKey, config.model), config);
    return { result, messages: toSessionMessages(messages, result.messages) };
  }
-@@ -224,23 +228,38 @@ export function decisionLogLines(
+@@ -224,36 +228,53 @@ export function decisionLogLines(
    );
  }
  
 -async function getApiKey(
+-  $: {
+-    env: { get: (name: string) => Promise<string | undefined> };
+-    settings: { read: () => Promise<Readonly<Record<string, unknown>>> };
+-  },
+-  config: HookConfig,
+-): Promise<string | undefined> {
+-  if (config.apiKey) return config.apiKey;
+-  const fromEnv = await $.env.get('TYPESAFE_API_KEY');
+-  if (fromEnv) return fromEnv;
+-  const settings = await $.settings.read();
+-  const env = settings['env'];
+-  if (env && typeof env === 'object') {
+-    const value = (env as Record<string, unknown>)['TYPESAFE_API_KEY'];
+-    if (typeof value === 'string' && value) return value;
 +/** The value of OPENROUTER_API_KEY in a dotenv text, or undefined. */
 +export function dotenvKey(text: string): string | undefined {
 +  for (const line of text.split('\n')) {
@@ -112,26 +126,19 @@ index cd894e2..4b608b0 100644
 +    if (value.startsWith('"') && value.endsWith('"')) return value.slice(1, -1) || undefined;
 +    if (value.startsWith("'") && value.endsWith("'")) return value.slice(1, -1) || undefined;
 +    return (value.split(/\s+#/)[0] ?? '').trim() || undefined;
-+  }
-+  return undefined;
-+}
-+
+   }
+   return undefined;
+ }
+ 
+-function notify(
 +export async function getApiKey(
-   $: {
-     env: { get: (name: string) => Promise<string | undefined> };
--    settings: { read: () => Promise<Readonly<Record<string, unknown>>> };
++  $: {
++    env: { get: (name: string) => Promise<string | undefined> };
 +    fs: { read: (path: string) => Promise<string> };
-   },
-   config: HookConfig,
- ): Promise<string | undefined> {
-   if (config.apiKey) return config.apiKey;
--  const fromEnv = await $.env.get('TYPESAFE_API_KEY');
--  if (fromEnv) return fromEnv;
--  const settings = await $.settings.read();
--  const env = settings['env'];
--  if (env && typeof env === 'object') {
--    const value = (env as Record<string, unknown>)['TYPESAFE_API_KEY'];
--    if (typeof value === 'string' && value) return value;
++  },
++  config: HookConfig,
++): Promise<string | undefined> {
++  if (config.apiKey) return config.apiKey;
 +  const fromEnv = await $.env.get('OPENROUTER_API_KEY');
 +  // An explicit empty value disables the personal-file fallback.
 +  if (fromEnv !== undefined) return fromEnv || undefined;
@@ -142,16 +149,38 @@ index cd894e2..4b608b0 100644
 +    return dotenvKey(await $.fs.read(`${home}/.config/siftr/.env`));
 +  } catch {
 +    return undefined;
-   }
--  return undefined;
++  }
++}
++
++export function notify(
+   $: {
+     ui: {
+       log: (text: string) => void;
+       toast: (text: string, options?: { timeoutMs?: number }) => void;
++      status: (text: string | undefined) => void;
+     };
+   },
+   text: string,
+ ): void {
+   $.ui.log(text);
+   $.ui.toast(text, { timeoutMs: 15_000 });
++  $.ui.status(`last /compact: ${text}`);
  }
  
- function notify(
+ export const register: Register = (on: On, options: PluginOptions) => {
 diff --git i/tests/hook.test.ts w/tests/hook.test.ts
-index 84e60fe..f107ecc 100644
+index 84e60fe..3732e3e 100644
 --- i/tests/hook.test.ts
 +++ w/tests/hook.test.ts
-@@ -53,7 +53,7 @@ function jevFetch(answer: (name: string) => number, bodies: string[] = []) {
+@@ -3,6 +3,7 @@ import {
+   compactSession,
+   decisionLog,
+   decisionLogLines,
++  notify,
+   resolveHookConfig,
+   summarize,
+   toSessionMessages,
+@@ -53,7 +54,7 @@ function jevFetch(answer: (name: string) => number, bodies: string[] = []) {
  
  describe('hook config', () => {
    it('reads userConfig values and falls back to defaults', () => {
@@ -160,7 +189,7 @@ index 84e60fe..f107ecc 100644
      expect(
        resolveHookConfig({ apiKey: 'k', keepThreshold: 0.3, maxStateTokens: 1000, model: 'jev-x', goal: 'g', compactAtPercent: 'no' }),
      ).toEqual({
-@@ -141,7 +141,7 @@ describe('compactSession', () => {
+@@ -141,9 +142,28 @@ describe('compactSession', () => {
  
    it('throws on a missing key and on failed requests so the hook falls back', async () => {
      const config = resolveHookConfig({ preserveRecentMessages: 1 });
@@ -169,6 +198,27 @@ index 84e60fe..f107ecc 100644
      await expect(
        compactSession(transcript(), { ...config, apiKey: 'k' }, async () => ({ status: 500, ok: false, text: 'x' })),
      ).rejects.toThrow(/500/);
+   });
+ });
++
++describe('notify', () => {
++  it('pins the last compaction outcome as a status line that outlives the toast', () => {
++    const calls: string[] = [];
++    const $ = {
++      ui: {
++        log: (text: string) => calls.push(`log:${text}`),
++        toast: (text: string) => calls.push(`toast:${text}`),
++        status: (text: string | undefined) => calls.push(`status:${text}`),
++      },
++    };
++    notify($, 'kept 8/22 messages, no summary (87% reduction)');
++    expect(calls).toEqual([
++      'log:kept 8/22 messages, no summary (87% reduction)',
++      'toast:kept 8/22 messages, no summary (87% reduction)',
++      'status:last /compact: kept 8/22 messages, no summary (87% reduction)',
++    ]);
++  });
++});
 diff --git i/tests/openrouter-provider.test.ts w/tests/openrouter-provider.test.ts
 new file mode 100644
 index 0000000..978fe88

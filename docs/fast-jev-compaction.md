@@ -27,7 +27,7 @@ Com o módulo carregado, reinicie o Claude Code ou use `/reload-plugins`. Depois
 - uso de Jev: toast/log `kept N/M messages, no summary (X% reduction; ... in K request(s))`, seguido de linhas `decisions:`. Não há mensagem de resumo na transcrição;
 - fallback: `fallback to built-in summary (<motivo>)` e o resumo nativo aparece.
 
-`claude --debug` registra os logs do hook. Sem nenhuma das duas mensagens, o hook não rodou.
+O patch também fixa o último resultado na linha de status do plugin (`last /compact: ...`). O toast some em 15 s, e o app desktop mostra só "Sessão compactada · economizou N tokens" para qualquer compactação. A linha de status continua visível até a próxima compactação. `claude --debug` registra os logs do hook. Sem nenhuma das duas mensagens, o hook não rodou.
 
 ## Envio de dados
 
