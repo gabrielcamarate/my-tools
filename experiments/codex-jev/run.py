@@ -19,6 +19,9 @@ home.mkdir(parents=True,exist_ok=True,mode=0o700)
 (home/'.codex-jev-lab').touch()
 source=a.source.resolve();binary=source/'target/release/codex'
 if not binary.is_file():p.error('Build the separate engine first; installed Codex is never used as fallback')
+host=source/'target/release/codex-code-mode-host'
+if not host.is_file() or not os.access(host,os.X_OK):
+ p.error('Build codex-code-mode-host beside the lab codex binary before starting; installed helpers are never used as fallback')
 args=a.arguments
 if args and args[0]=='--':args=args[1:]
 if not args:p.error('Provide explicit Codex arguments after --')

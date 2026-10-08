@@ -69,7 +69,14 @@ npm install --prefix /caminho/codex-jev-lab/lab-runtime --ignore-scripts bun@1.4
 # Limitar jobs e destinar os artefatos somente ao laboratório:
 cd /caminho/codex-jev-lab/codex-rs
 CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR=/caminho/codex-jev-lab/target cargo build --locked --release -p codex-cli --bin codex
+CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR=/caminho/codex-jev-lab/target cargo build --locked --release -p codex-code-mode-host --bin codex-code-mode-host
 ```
+
+O runtime de ferramentas exige `codex-code-mode-host` ao lado de `codex` em
+`target/release`. O launcher verifica sua presença e permissão de execução antes
+de abrir uma sessão. Compilar só `codex` não prepara esse runtime. Depois de
+completar uma instalação existente, encerre e retome o CLI experimental para
+recriar o runtime de ferramentas; a autenticação isolada permanece no HOME do lab.
 
 O helper usa o binário Bun do pacote opcional `@oven/bun-linux-x64`, dispensando
 postinstall. Não rode o launcher `.desktop` upstream durante esta avaliação.
