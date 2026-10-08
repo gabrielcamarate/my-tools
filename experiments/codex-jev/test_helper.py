@@ -1,5 +1,6 @@
 """Synthetic helper acceptance; no real session or private project input."""
 import argparse, json, subprocess, time
+from manage import helper_command
 from pathlib import Path
 parser=argparse.ArgumentParser();parser.add_argument("--source",required=True);parser.add_argument("--live",action="store_true");parser.add_argument("--recoverable",action="store_true");args=parser.parse_args()
 root=Path(args.source)
@@ -18,7 +19,7 @@ env=None
 if not args.live:
  import os
  env={**os.environ,"OPENROUTER_API_KEY":""}
-t=time.monotonic();p=subprocess.run([str(bun),str(root/"jev/codex-jev-compact.ts")],input=fixture,text=True,capture_output=True,env=env,timeout=30)
+t=time.monotonic();p=subprocess.run(helper_command(root),input=fixture,text=True,capture_output=True,env=env,timeout=30)
 record={"live":args.live,"recoverable_source":args.recoverable,"returncode":p.returncode,"seconds":round(time.monotonic()-t,3),"input_chars":len(fixture)}
 if not args.live:
  assert p.returncode!=0 and not p.stdout, "Missing credential must produce no accepted history"

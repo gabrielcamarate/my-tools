@@ -1,5 +1,6 @@
 """Provider contract, invalid-response fallback and literal preservation."""
 import json, os, subprocess, sys
+from manage import helper_command
 from pathlib import Path
 root=Path(sys.argv[1]);lab=Path(__file__).resolve().parent
 bun=root/'lab-runtime/node_modules/@oven/bun-linux-x64/bin/bun'
@@ -9,7 +10,8 @@ for i in range(25):
 items += [{'type':'message','role':'user','content':[{'type':'input_text','text':'Preserve LAST_SENTINEL'}]}]*8
 results=[]
 for scenario in ('network','malformed','http-error','invalid-probability','keep-all','select'):
- p=subprocess.run([str(bun),'--preload',str(lab/'mock-provider.ts'),str(root/'jev/codex-jev-compact.ts')],input=json.dumps(items),text=True,capture_output=True,env={**os.environ,'OPENROUTER_API_KEY':'synthetic-key','JEV_LAB_SCENARIO':scenario},timeout=15)
+ command=helper_command(root);command[-1:-1]=['--preload',str(lab/'mock-provider.ts')]
+ p=subprocess.run(command,input=json.dumps(items),text=True,capture_output=True,env={**os.environ,'OPENROUTER_API_KEY':'synthetic-key','JEV_LAB_SCENARIO':scenario},timeout=15)
  if scenario=='select':
   assert p.returncode==0,p.stderr
   answer=json.loads(p.stdout)

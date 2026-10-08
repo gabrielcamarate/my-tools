@@ -227,3 +227,9 @@ e não ativa compactação nas conversas normais. Não faz parte de `install/upd
 Resultados do helper e do motor têm evidências separadas; o backend sintético
 não comprova latência nem qualidade real do ChatGPT. A skill `gabriel-reflect`
 aponta para a avaliação somente quando esse experimento for autorizado.
+
+A [extensão gerenciada para CLI e Desktop](experiments/codex-jev/MANAGED.md)
+acompanha separadamente os pacotes instalados. Seus launchers opt-in e o hook
+pessoal de atualização do Omarchy são uma instalação explícita, fora do ciclo
+`install/update --all`. O app principal é preservado. Novas versões passam em
+gates offline antes de ativar Jev; falhas deixam a compactação oficial disponível.

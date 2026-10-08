@@ -1,0 +1,393 @@
+diff --git c/codex-rs/Cargo.toml w/codex-rs/Cargo.toml
+index 382b9b9..428297a 100644
+--- c/codex-rs/Cargo.toml
++++ w/codex-rs/Cargo.toml
+@@ -1,5 +1,6 @@
+ [workspace]
+ members = [
++    "jev-tests",
+     "aws-auth",
+     "analytics",
+     "agent-graph-store",
+diff --git c/codex-rs/core/src/compact_jev.rs w/codex-rs/core/src/compact_jev.rs
+new file mode 100644
+index 0000000..2138794
+--- /dev/null
++++ w/codex-rs/core/src/compact_jev.rs
+@@ -0,0 +1,177 @@
++//! Jev-guided verbatim pruning, tried before a summarizing compaction.
++//!
++//! Opt-in through `CODEX_JEV_COMPACT`, the path of an executable helper. The helper reads the
++//! history as a JSON array of response items on stdin and answers on stdout with
++//! `{"keep": [index, ...], "replace": {"index": "text"}}`: the items to keep, in order, and new
++//! text for tool outputs it truncated. It exits non-zero when pruning is not worth it. Items are
++//! rebuilt from the originals here, so nothing but the replaced output text is ever rewritten;
++//! any error, timeout or answer that would leave a call without its output falls back to the
++//! regular compaction.
++
++use std::collections::HashMap;
++use std::collections::HashSet;
++use std::process::Stdio;
++use std::time::Duration;
++
++use codex_history::ResponseItemEnvelope;
++use codex_protocol::models::FunctionCallOutputBody;
++use codex_protocol::models::ResponseItem;
++use serde::Deserialize;
++use tokio::io::AsyncWriteExt;
++use tokio::process::Command;
++use tracing::info;
++use tracing::warn;
++
++const HELPER_ENV_VAR: &str = "CODEX_JEV_COMPACT";
++// ponytail: fixed timeout; make it configurable if Jev latency ever needs more.
++const HELPER_TIMEOUT: Duration = Duration::from_secs(120);
++
++#[derive(Deserialize)]
++struct HelperAnswer {
++    keep: Vec<usize>,
++    #[serde(default)]
++    replace: HashMap<String, String>,
++}
++
++/// Returns the pruned history, or `None` when pruning is off, fails or is not worth it.
++pub(crate) async fn prune_history(
++    items: &[ResponseItemEnvelope],
++) -> Option<Vec<ResponseItemEnvelope>> {
++    let helper = std::env::var_os(HELPER_ENV_VAR)?;
++    let raw_items: Vec<&ResponseItem> = items.iter().map(|envelope| &envelope.item).collect();
++    let input = match serde_json::to_vec(&raw_items) {
++        Ok(input) => input,
++        Err(err) => {
++            warn!("jev compaction: failed to serialize history: {err}");
++            return None;
++        }
++    };
++    let answer = match tokio::time::timeout(HELPER_TIMEOUT, run_helper(&helper, input)).await {
++        Ok(Ok(answer)) => answer,
++        Ok(Err(err)) => {
++            info!("jev compaction skipped: {err}");
++            return None;
++        }
++        Err(_) => {
++            warn!("jev compaction: helper timed out");
++            return None;
++        }
++    };
++    let pruned = apply_answer(items, answer);
++    if pruned.is_none() {
++        warn!("jev compaction: helper answer rejected (would orphan a call or output)");
++    }
++    pruned
++}
++
++async fn run_helper(helper: &std::ffi::OsStr, input: Vec<u8>) -> Result<HelperAnswer, String> {
++    let mut child = Command::new(helper)
++        .stdin(Stdio::piped())
++        .stdout(Stdio::piped())
++        .stderr(Stdio::piped())
++        .kill_on_drop(true)
++        .spawn()
++        .map_err(|err| format!("failed to start helper: {err}"))?;
++    let mut stdin = child.stdin.take().ok_or("helper stdin unavailable")?;
++    stdin
++        .write_all(&input)
++        .await
++        .map_err(|err| format!("failed to write history: {err}"))?;
++    drop(stdin);
++    let output = child
++        .wait_with_output()
++        .await
++        .map_err(|err| format!("helper failed: {err}"))?;
++    let stderr = String::from_utf8_lossy(&output.stderr);
++    if !output.status.success() {
++        return Err(format!(
++            "helper exited with {}: {}",
++            output.status,
++            stderr.trim()
++        ));
++    }
++    info!("jev compaction: {}", stderr.trim());
++    serde_json::from_slice(&output.stdout).map_err(|err| format!("invalid helper answer: {err}"))
++}
++
++fn apply_answer(
++    items: &[ResponseItemEnvelope],
++    answer: HelperAnswer,
++) -> Option<Vec<ResponseItemEnvelope>> {
++    if answer.keep.windows(2).any(|pair| pair[0] >= pair[1])
++        || answer.keep.last().is_some_and(|&last| last >= items.len())
++    {
++        return None;
++    }
++    // Protect instructions, goals, images and user messages independently of the helper.
++    let kept: HashSet<usize> = answer.keep.iter().copied().collect();
++    for (index, envelope) in items.iter().enumerate() {
++        if !kept.contains(&index)
++            && call_id_of(&envelope.item).is_none()
++            && !matches!(envelope.item, ResponseItem::Reasoning { .. })
++        {
++            return None;
++        }
++    }
++    if answer.replace.keys().any(|index| {
++        index
++            .parse::<usize>()
++            .ok()
++            .is_none_or(|index| !kept.contains(&index))
++    }) {
++        return None;
++    }
++    let mut pruned = Vec::with_capacity(answer.keep.len());
++    for &index in &answer.keep {
++        let mut envelope = items[index].clone();
++        if let Some(text) = answer.replace.get(&index.to_string()) {
++            match &mut envelope.item {
++                ResponseItem::FunctionCallOutput { output, .. }
++                | ResponseItem::CustomToolCallOutput { output, .. } => {
++                    // Never replace image/structured outputs with a text projection.
++                    if !matches!(output.body, FunctionCallOutputBody::Text(_)) {
++                        return None;
++                    }
++                    output.body = FunctionCallOutputBody::Text(text.clone());
++                }
++                _ => return None,
++            }
++        }
++        pruned.push(envelope);
++    }
++    // Every call id must keep both halves or lose both: the Responses API rejects an output
++    // without its call, and a call without its output.
++    let mut halves: HashMap<&str, (usize, usize)> = HashMap::new();
++    for (index, envelope) in items.iter().enumerate() {
++        let Some(call_id) = call_id_of(&envelope.item) else {
++            continue;
++        };
++        let (total, retained) = halves.entry(call_id).or_default();
++        *total += 1;
++        if kept.contains(&index) {
++            *retained += 1;
++        }
++    }
++    halves
++        .values()
++        .all(|&(total, retained)| retained == 0 || retained == total)
++        .then_some(pruned)
++}
++
++/// The call id of a tool call or tool output item.
++fn call_id_of(item: &ResponseItem) -> Option<&str> {
++    match item {
++        ResponseItem::FunctionCall { call_id, .. }
++        | ResponseItem::CustomToolCall { call_id, .. }
++        | ResponseItem::CustomToolCallOutput { call_id, .. } => Some(call_id),
++        ResponseItem::LocalShellCall { call_id, .. }
++        | ResponseItem::ToolSearchCall { call_id, .. }
++        | ResponseItem::FunctionCallOutput { call_id, .. }
++        | ResponseItem::ToolSearchOutput { call_id, .. } => call_id.as_deref(),
++        _ => None,
++    }
++}
++
++#[cfg(test)]
++#[path = "compact_jev_tests.rs"]
++mod tests;
+diff --git c/codex-rs/core/src/compact_jev_tests.rs w/codex-rs/core/src/compact_jev_tests.rs
+new file mode 100644
+index 0000000..1f4003c
+--- /dev/null
++++ w/codex-rs/core/src/compact_jev_tests.rs
+@@ -0,0 +1,86 @@
++use super::*;
++use codex_protocol::models::FunctionCallOutputPayload;
++use pretty_assertions::assert_eq;
++
++fn call(call_id: &str) -> ResponseItemEnvelope {
++    ResponseItemEnvelope::new(ResponseItem::FunctionCall {
++        id: None,
++        name: "shell".to_string(),
++        namespace: None,
++        arguments: "{}".to_string(),
++        encrypted_function_args: None,
++        call_id: call_id.to_string(),
++        internal_chat_message_metadata_passthrough: None,
++    })
++}
++
++fn output(call_id: &str, text: &str) -> ResponseItemEnvelope {
++    ResponseItemEnvelope::new(ResponseItem::FunctionCallOutput {
++        id: None,
++        call_id: Some(call_id.to_string()),
++        name: None,
++        namespace: None,
++        output: FunctionCallOutputPayload::from_text(text.to_string()),
++        internal_chat_message_metadata_passthrough: None,
++    })
++}
++
++fn answer(keep: &[usize], replace: &[(usize, &str)]) -> HelperAnswer {
++    HelperAnswer {
++        keep: keep.to_vec(),
++        replace: replace
++            .iter()
++            .map(|(index, text)| (index.to_string(), text.to_string()))
++            .collect(),
++    }
++}
++
++#[test]
++fn drops_pairs_and_truncates_outputs() {
++    let items = vec![
++        call("a"),
++        output("a", "long a"),
++        call("b"),
++        output("b", "long b"),
++    ];
++
++    let pruned = apply_answer(&items, answer(&[2, 3], &[(3, "short b")]));
++
++    assert_eq!(pruned, Some(vec![call("b"), output("b", "short b")]));
++}
++
++#[test]
++fn rejects_answers_that_orphan_or_reorder() {
++    let items = vec![call("a"), output("a", "long a")];
++
++    assert_eq!(apply_answer(&items, answer(&[1], &[])), None);
++    assert_eq!(apply_answer(&items, answer(&[1, 0], &[])), None);
++    assert_eq!(apply_answer(&items, answer(&[0, 1, 2], &[])), None);
++    assert_eq!(
++        apply_answer(&items, answer(&[0, 1], &[(0, "not an output")])),
++        None
++    );
++}
++
++#[test]
++fn refuses_to_drop_instructions_or_replace_unknown_indices() {
++    let items = vec![
++        ResponseItemEnvelope::new(ResponseItem::Message {
++            id: None,
++            role: "developer".to_string(),
++            content: vec![codex_protocol::models::ContentItem::InputText {
++                text: "Never repeat a write".to_string(),
++            }],
++            phase: None,
++            internal_chat_message_metadata_passthrough: None,
++        }),
++        call("a"),
++        output("a", "long a"),
++    ];
++    assert_eq!(apply_answer(&items, answer(&[1, 2], &[])), None);
++    assert_eq!(apply_answer(&items, answer(&[0], &[(2, "orphan")])), None);
++    assert_eq!(
++        apply_answer(&items, answer(&[0], &[])),
++        Some(vec![items[0].clone()])
++    );
++}
+diff --git c/codex-rs/core/src/compact_remote_v2.rs w/codex-rs/core/src/compact_remote_v2.rs
+index 6a06108..952bae2 100644
+--- c/codex-rs/core/src/compact_remote_v2.rs
++++ w/codex-rs/core/src/compact_remote_v2.rs
+@@ -234,6 +234,44 @@ async fn run_remote_compact_task_inner_impl(
+     sess.emit_turn_item_started(turn_context, &compaction_item)
+         .await;
+ 
++    // Retain the existing context baseline: Jev prunes tool pairs, not instructions.
++    let jev_history = sess.clone_history().await;
++    let input_goal_ids = crate::context::UserGoalUpdate::message_ids(
++        jev_history.annotated_items().iter().map(|envelope| &envelope.item),
++    );
++    if let Some(mut pruned) = crate::compact_jev::prune_history(jev_history.annotated_items()).await {
++        let reference_context = jev_history.reference_context_item()
++            .unwrap_or_else(|| replacement_step_context.to_turn_context_item());
++        let baseline = if let Some(baseline) = jev_history.world_state_baseline() {
++            baseline
++        } else {
++            // Imported histories may have no baseline. Add the current context once.
++            let (replacement, baseline) = build_compaction_replacement_history(
++                sess.as_ref(), replacement_step_context, &world_state, pruned,
++            ).await;
++            pruned = replacement;
++            baseline
++        };
++        let (window_number, window_ids) = sess.advance_auto_compact_window().await;
++        sess.replace_compacted_history(
++            pruned,
++            reference_context,
++            baseline,
++            CompactedHistoryMetadata {
++                input_goal_ids,
++                message: String::new(),
++                window_number,
++                window_ids,
++                compaction_response_id: None,
++                compaction_model_hash: None,
++                reviewer_compaction_hash: None,
++            },
++        ).await;
++        sess.recompute_token_usage(&replacement_step_context.turn).await;
++        sess.emit_turn_item_completed(turn_context, compaction_item).await;
++        return Ok(());
++    }
++
+     let attempt = run_remote_compact_v2_attempt(
+         sess,
+         step_context,
+diff --git c/codex-rs/core/src/context_manager/history.rs w/codex-rs/core/src/context_manager/history.rs
+index 38ef4a5..f2b800a 100644
+--- c/codex-rs/core/src/context_manager/history.rs
++++ w/codex-rs/core/src/context_manager/history.rs
+@@ -481,6 +481,10 @@ impl ContextManager {
+         )
+     }
+ 
++    pub(crate) fn world_state_baseline(&self) -> Option<WorldStateSnapshot> {
++        self.world_state_baseline.clone()
++    }
++
+     pub(crate) fn set_world_state_baseline(&mut self, snapshot: WorldStateSnapshot) {
+         self.world_state_baseline = Some(snapshot);
+     }
+diff --git c/codex-rs/core/src/lib.rs w/codex-rs/core/src/lib.rs
+index a2b44e3..d26c361 100644
+--- c/codex-rs/core/src/lib.rs
++++ w/codex-rs/core/src/lib.rs
+@@ -33,6 +33,7 @@ pub use turn_metadata::detached_memory_responses_metadata;
+ mod codex_thread;
+ mod turn_extension_data;
+ pub use turn_extension_data::WithTurnExtensionData;
++mod compact_jev;
+ mod compact_model_fallback;
+ mod compact_remote_history;
+ mod compact_remote_v2;
+diff --git c/codex-rs/jev-tests/Cargo.toml w/codex-rs/jev-tests/Cargo.toml
+new file mode 100644
+index 0000000..b3e7199
+--- /dev/null
++++ w/codex-rs/jev-tests/Cargo.toml
+@@ -0,0 +1,16 @@
++[package]
++name = "codex-jev-tests"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++
++[dependencies]
++codex-history = { workspace = true }
++codex-protocol = { workspace = true }
++serde = { workspace = true, features = ["derive"] }
++serde_json = { workspace = true }
++tokio = { workspace = true, features = ["io-util", "process", "time"] }
++tracing = { workspace = true }
++
++[dev-dependencies]
++pretty_assertions = { workspace = true }
+diff --git c/codex-rs/jev-tests/src/lib.rs w/codex-rs/jev-tests/src/lib.rs
+new file mode 100644
+index 0000000..68769e3
+--- /dev/null
++++ w/codex-rs/jev-tests/src/lib.rs
+@@ -0,0 +1,3 @@
++// Compile the production module directly, without the unrelated core test suite.
++#[path = "../../core/src/compact_jev.rs"]
++mod compact_jev;

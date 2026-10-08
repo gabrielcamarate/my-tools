@@ -8,7 +8,7 @@ import argparse, base64, json, os, queue, subprocess, tempfile, threading, time,
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-parser=argparse.ArgumentParser();parser.add_argument('--source',type=Path,required=True);parser.add_argument('--mode',choices=('baseline','jev','missing-key'),required=True);parser.add_argument('--chatgpt',action='store_true');parser.add_argument('--model',default='gpt-6-sol');args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--source',type=Path,required=True);parser.add_argument('--mode',choices=('baseline','jev','missing-key'),required=True);parser.add_argument('--chatgpt',action='store_true');parser.add_argument('--mock-jev',action='store_true');parser.add_argument('--model',default='gpt-6-sol');args=parser.parse_args()
 requests=[]
 class Backend(BaseHTTPRequestHandler):
  protocol_version="HTTP/1.1"
@@ -51,6 +51,11 @@ try:
   if args.mode=='missing-key':env['OPENROUTER_API_KEY']=''
   launcher=Path(__file__).parent/'run.py';mode='baseline' if args.mode=='baseline' else 'jev'
   command=['python3',str(launcher),'--source',str(args.source),'--home',str(home),'--mode',mode,'--','app-server']
+  if args.mock_jev:
+   if args.chatgpt:raise RuntimeError('Synthetic Jev must not be reported as a real-provider test')
+   command[command.index('--'):command.index('--')]=['--helper-preload',str(Path(__file__).parent/'mock-provider.ts')]
+   env['OPENROUTER_API_KEY']='synthetic-key'
+   env['JEV_LAB_SCENARIO']='select'
   error_log=home/'stderr.log'
   with error_log.open('w') as error:
    process=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=error,env=env,text=True,bufsize=1,start_new_session=True)
