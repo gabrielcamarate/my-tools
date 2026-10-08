@@ -30,6 +30,14 @@ Não crie aliases de operações. O catálogo inclui somente ferramentas integra
 
 Instalação e inferência exigem rede; inferência exige credencial oficial. Venv e checagens offline não são sandbox de segurança contra código hostil. Hashes detectam mudanças acidentais; não protegem de um invasor que controla a conta e os registros. Versões oficiais anteriores são mantidas para rollback. Aceitação técnica não comprova qualidade de decisões nem economia de tokens.
 
+O experimento [Codex Jev gerenciado](../experiments/codex-jev/MANAGED.md) é uma
+exceção explícita ao lifecycle de ferramentas comuns: compila um motor opt-in
+da tag OpenAI instalada, com perfis separados para CLI e Desktop. Usa um único
+cache serializado, cópias aceitas imutáveis e validação de protocolo por alvo.
+Seu hook pessoal do Omarchy não substitui os executáveis oficiais nem participa
+de `update --all`. Não faz proxy de inferência e não transfere configurações ou
+históricos pessoais.
+
 Para Pruner, repair recompila o mesmo SHA em staging e restaura fonte/cache em falha recuperável. Atualização verifica aplicação do patch antes da troca; não tenta traduzir protocolos ou resolver conflitos automaticamente. A configuração OpenRouter preserva a API de decisões tipadas e o motor original.
 
 ## CLIs com skills upstream

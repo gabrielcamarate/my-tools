@@ -4,6 +4,10 @@ Experimento de substituição da compactação, não uma ferramenta ativada nas 
 Fonte fixada em `manifest.json`; patch de transporte OpenRouter em `openrouter.patch`.
 O engine e as decisões de seleção permanecem upstream. Requisições têm timeout de 10 segundos.
 
+Para acompanhar versões instaladas e testar o Desktop em perfil separado, veja
+[a extensão gerenciada](MANAGED.md). O relatório abaixo conserva a prova histórica
+0.159.0; não descreve automaticamente o estado dos motores gerenciados.
+
 ## Limites de isolamento
 
 - Não substituir `codex`, registrar hooks/MCP nem alterar `~/.codex`.

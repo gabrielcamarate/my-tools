@@ -48,3 +48,8 @@ The isolated compaction experiment references AyushChauhan9389/codex-jev at
 rust-v0.159.0. Its vendored fast-jev-compaction helper retains the MIT license.
 My Tools stores only provider/build patches, launch safeguards and synthetic
 acceptance tests; upstream source and binaries are obtained separately.
+
+The managed extension ports the small Jev integration onto installed OpenAI Codex
+release tags. `integration.patch` contains the Apache-2.0 engine adaptation;
+the MIT helper is fetched from its pinned upstream revision, not copied into this
+repository. Official distributions and experimental engines remain separate.

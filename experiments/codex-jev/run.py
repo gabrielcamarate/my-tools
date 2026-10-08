@@ -5,6 +5,7 @@ p=argparse.ArgumentParser()
 p.add_argument('--source',type=Path,required=True)
 p.add_argument('--home',type=Path,required=True)
 p.add_argument('--mode',choices=('baseline','jev'),required=True)
+p.add_argument('--helper-preload',type=Path,help='Explicit synthetic provider preload for isolated tests only')
 p.add_argument('arguments',nargs=argparse.REMAINDER)
 a=p.parse_args()
 real_home=Path.home().resolve();home=a.home.expanduser().resolve()
@@ -53,7 +54,8 @@ if a.mode=='jev':
  bun=source/'lab-runtime/node_modules/@oven/bun-linux-x64/bin/bun'
  helper=home/'helper.sh'
  import shlex
- helper.write_text('#!/bin/sh\nexec '+shlex.quote(str(bun))+' '+shlex.quote(str(source/'jev/codex-jev-compact.ts'))+'\n')
+ preload = (' --preload '+shlex.quote(str(a.helper_preload.resolve()))) if a.helper_preload else ''
+ helper.write_text('#!/bin/sh\nexec '+shlex.quote(str(bun))+preload+' '+shlex.quote(str(source/'jev/codex-jev-compact.ts'))+'\n')
  helper.chmod(0o700)
  env['CODEX_JEV_COMPACT']=str(helper)
 os.execve(str(binary),[str(binary),'-c','cli_auth_credentials_store="file"',*args],env)
