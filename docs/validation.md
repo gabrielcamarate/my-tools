@@ -36,4 +36,4 @@ Em 30/09/2026, v0.5.0: 45 testes do controlador e check de publicação passaram
 Ver [aceitação sintética reproduzível](local-adoption.md). Nenhum percentual
 de redução de stdout foi convertido em economia total de tokens ou cota Codex.
 
-Em 07/10/2026: Fast Jev Compaction instalado no SHA `e3f262a`, typecheck e 31 testes upstream/provedor passaram, `claude plugin validate` (2.1.290) aceitou o módulo. Teste live sintético via OpenRouter reduziu 26 → 8 mensagens e confirmou três fallbacks. O carregamento no motor ficou bloqueado pelo rollout remoto. Veja docs/fast-jev-compaction.md.
+Em 07/10/2026: Fast Jev Compaction instalado no SHA `e3f262a`, typecheck e 31 testes upstream/provedor passaram, `claude plugin validate` (2.1.290) aceitou o módulo. Teste live sintético via OpenRouter reduziu 26 → 8 mensagens e confirmou três fallbacks. Depois que o rollout remoto foi liberado, `/compact` no motor manteve 8 de 22 mensagens sem resumo nativo. Veja docs/fast-jev-compaction.md.
