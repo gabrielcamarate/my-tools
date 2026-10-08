@@ -99,3 +99,5 @@ O opt-in é reversível: feche apenas o perfil Jev e abra o app oficial. Para
 desabilitar atualizações, remova apenas o hook com marcador
 `my-tools: codex-jev-managed-v1`. Não remova perfis com trabalho sem reconciliação.
 As compilações/sources anteriores não são apagadas à força nem processos mortos.
+
+Evidência local datada e limites: [relatório de aceitação](MANAGED-REPORT.md).
