@@ -24,12 +24,19 @@ def patch_signature():
     result = hashlib.sha256()
     for name in ('integration.patch', 'openrouter.patch', 'rust-1.98-build.patch', 'manifest.json'):
         result.update((HERE / name).read_bytes())
-    result.update(b'release-no-lto; strip-debug-v2')
+    result.update(b'release-no-lto; strip-debug-v2; helper-no-project-config-v1')
     return result.hexdigest()
 
 
 def run(args, **kwargs):
     return subprocess.run([str(a) for a in args], check=True, text=True, **kwargs)
+
+
+def helper_command(source):
+    source = Path(source).resolve()
+    return [str(source / 'lab-runtime/node_modules/@oven/bun-linux-x64/bin/bun'),
+            '--no-env-file', '--config=/dev/null', '--cwd=' + str(source / 'jev'),
+            str(source / 'jev/codex-jev-compact.ts')]
 
 
 def digest(path):
@@ -92,7 +99,7 @@ def atomic_json(path, data):
     tmp.replace(path)
 
 
-def matches(record, binary):
+def matches(record, binary, check_desktop=True):
     if not record or record.get('official_sha256') != digest(binary) or record.get('version') != version(binary):
         return False
     if record.get('patchset') != patch_signature():
@@ -100,7 +107,7 @@ def matches(record, binary):
     host = binary.parent / 'codex-code-mode-host'
     if record.get('official_host_sha256') and (not host.is_file() or digest(host) != record['official_host_sha256']):
         return False
-    if record.get('desktop_bundle_sha256'):
+    if check_desktop and record.get('desktop_bundle_sha256'):
         try:
             if desktop_interface(binary) != record['desktop_bundle_sha256']:
                 return False
@@ -140,6 +147,7 @@ def validate(source, binary):
             os.environ.clear()
             os.environ.update(saved)
     run([sys.executable, HERE / 'test_transport.py', source], capture_output=True, timeout=120)
+    run([sys.executable, HERE / 'test_runtime.py', '--source', source], capture_output=True, timeout=30)
     run([sys.executable, HERE / 'test_host.py', '--source', source], capture_output=True, timeout=90)
     for mode in ('baseline', 'jev', 'missing-key'):
         command = [sys.executable, HERE / 'test_engine.py', '--source', source, '--mode', mode]
@@ -212,8 +220,14 @@ def fetch_helper(source):
 
 def prepare(state, target):
     binary = official(target)
-    if matches(load(state).get(target), binary):
+    record = load(state).get(target)
+    if matches(record, binary):
         print(f'{target}: current, no rebuild')
+        return
+    if target == 'desktop' and matches(record, binary, check_desktop=False):
+        # A renderer-only update does not require rebuilding the unchanged engine.
+        accept(state, target, Path(record['source']), binary)
+        print('desktop: bundle revalidated; existing matched engine retained')
         return
     target_version = version(binary)
     bundle_hash = desktop_interface(binary) if target == 'desktop' else ''
@@ -262,11 +276,31 @@ def launch(state, target, arguments):
     env.pop('CODEX_JEV_COMPACT', None)
     if matches(record, binary):
         source = Path(record['source'])
-        helper = state / f'helper-{target}.sh'
+        identity = hashlib.sha256(json.dumps({'source': record['source'], 'files': record['files'], 'patchset': record['patchset']}, sort_keys=True).encode()).hexdigest()[:16]
+        directory = state / 'helpers'
+        if directory.is_symlink():
+            raise RuntimeError('Managed helper directory is a symlink')
+        directory.mkdir(mode=0o700, exist_ok=True)
+        helper = directory / f'{target}-{identity}.sh'
         import shlex
-        text = '#!/bin/sh\nexec ' + shlex.quote(str(source / 'lab-runtime/node_modules/@oven/bun-linux-x64/bin/bun')) + ' ' + shlex.quote(str(source / 'jev/codex-jev-compact.ts')) + '\n'
-        helper.write_text(text)
-        helper.chmod(0o700)
+        text = '#!/bin/sh\nunset BUN_OPTIONS NODE_OPTIONS\nexec ' + shlex.join(helper_command(source)) + '\n'
+        if helper.is_symlink() or (helper.exists() and helper.read_text() != text):
+            raise RuntimeError('Existing managed helper changed; refusing replacement')
+        if not helper.exists():
+            with tempfile.NamedTemporaryFile(mode='w', dir=directory, delete=False) as temporary:
+                temporary.write(text)
+                temporary.flush()
+                os.fsync(temporary.fileno())
+                os.fchmod(temporary.fileno(), 0o700)
+                pending = Path(temporary.name)
+            try:
+                # Atomic create without replacing a helper another process already uses.
+                os.link(pending, helper)
+            except FileExistsError:
+                if helper.is_symlink() or helper.read_text() != text:
+                    raise RuntimeError('Concurrent helper differs from validated runtime')
+            finally:
+                pending.unlink()
         env['CODEX_JEV_COMPACT'] = str(helper)
         binary = source / 'target/release/codex'
     else:

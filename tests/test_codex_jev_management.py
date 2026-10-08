@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import tempfile
 import struct
+import shutil
 import unittest
 from unittest.mock import patch
 
@@ -106,6 +107,23 @@ class ManagedEngineTests(unittest.TestCase):
         self.assertNotIn('CODEX_JEV_COMPACT', env)
         self.assertEqual(arguments, [str(self.official), '--version'])
 
+    def test_new_acceptance_preserves_helper_used_by_running_engine(self):
+        self.accept()
+        with patch.object(manager, 'official', return_value=self.official), patch.object(os, 'execve') as execute:
+            manager.launch(self.state, 'cli', [])
+            old = Path(execute.call_args.args[2]['CODEX_JEV_COMPACT'])
+            old_bytes = old.read_bytes()
+            new_source = self.root / 'new-source'
+            shutil.copytree(self.source, new_source)
+            with patch.object(manager, 'validate'):
+                manager.accept(self.state, 'cli', new_source, self.official)
+            manager.launch(self.state, 'cli', [])
+            new = Path(execute.call_args.args[2]['CODEX_JEV_COMPACT'])
+        self.assertNotEqual(old, new)
+        self.assertEqual(old.read_bytes(), old_bytes)
+        self.assertIn(str(self.source), old.read_text())
+        self.assertIn(str(new_source), new.read_text())
+
     def test_desktop_has_separate_renderer_and_engine_profiles(self):
         self.accept()
         records = manager.load(self.state)
@@ -150,7 +168,18 @@ class ManagedEngineTests(unittest.TestCase):
         self.accept()
         with patch.object(manager, 'official', return_value=self.official), patch.object(manager, 'run', wraps=manager.run) as commands:
             manager.prepare(self.state, 'cli')
-        self.assertFalse(any('clone' in args.args[0] for args in commands.call_args_list))
+        self.assertFalse(any(call.args[0][0] in ('cargo', 'git', 'npm') for call in commands.call_args_list))
+
+    def test_renderer_only_update_revalidates_without_rebuilding_engine(self):
+        self.accept()
+        records = manager.load(self.state)
+        records['desktop'] = {**records['cli'], 'desktop_bundle_sha256': 'old-bundle'}
+        manager.atomic_json(self.state / 'accepted.json', records)
+        with patch.object(manager, 'official', return_value=self.official), patch.object(manager, 'desktop_interface', return_value='new-bundle'), patch.object(manager, 'validate'), patch.object(manager, 'run', wraps=manager.run) as commands:
+            manager.prepare(self.state, 'desktop')
+        self.assertEqual(manager.load(self.state)['desktop']['source'], str(self.source))
+        self.assertEqual(manager.load(self.state)['desktop']['desktop_bundle_sha256'], 'new-bundle')
+        self.assertFalse(any(call.args[0][0] in ('cargo', 'git', 'npm') for call in commands.call_args_list))
 
     def test_refuses_unrecognized_versions(self):
         self.official.write_text('#!/bin/sh\necho "unknown vendor version"\n')

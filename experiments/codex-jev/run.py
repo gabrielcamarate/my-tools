@@ -54,8 +54,10 @@ if a.mode=='jev':
  bun=source/'lab-runtime/node_modules/@oven/bun-linux-x64/bin/bun'
  helper=home/'helper.sh'
  import shlex
- preload = (' --preload '+shlex.quote(str(a.helper_preload.resolve()))) if a.helper_preload else ''
- helper.write_text('#!/bin/sh\nexec '+shlex.quote(str(bun))+preload+' '+shlex.quote(str(source/'jev/codex-jev-compact.ts'))+'\n')
+ from manage import helper_command
+ command = helper_command(source)
+ if a.helper_preload:command[-1:-1]=['--preload',str(a.helper_preload.resolve())]
+ helper.write_text('#!/bin/sh\nunset BUN_OPTIONS NODE_OPTIONS\nexec '+shlex.join(command)+'\n')
  helper.chmod(0o700)
  env['CODEX_JEV_COMPACT']=str(helper)
 os.execve(str(binary),[str(binary),'-c','cli_auth_credentials_store="file"',*args],env)

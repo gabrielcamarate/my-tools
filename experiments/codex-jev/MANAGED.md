@@ -23,6 +23,11 @@ pessoais acessíveis pelo HOME permanecem pessoais; MCPs/configuração do perfi
 original não são clonados automaticamente. Plugins incluídos no app são
 resolvidos pelos recursos do próprio pacote.
 
+O helper ignora carregamento automático de `.env`, configuração Bun do projeto
+e opções herdadas de preload. Seu cwd é a fonte fixada; a credencial permanece
+na resolução nativa compartilhada. O probe real do Bun inclui controle positivo
+antes de confirmar que dotenv/preload ficam bloqueados.
+
 Use somente tarefas técnicas autorizadas para envio ao provedor Jev. A seleção
 envia conteúdo de histórico ao OpenRouter. Não abra neste perfil credenciais,
 dados financeiros/clientes, mensagens pessoais ou logs operacionais privados.
@@ -47,6 +52,8 @@ pacote. A tag é `rust-v<VERSAO>`, inclusive pré-releases. Obtém o helper da r
 fixada do fork original e aplica o patch OpenRouter revisado. As versões de
 pacotes locais no lockfile da release podem precisar normalização de 0.0.0 para
 a versão workspace; versões/checksums/dependências externos não são alterados.
+Uma atualização apenas do renderer, com motor e auxiliar idênticos, revalida o
+bundle e reutiliza o executável aceito, sem recompilar o Codex.
 
 Antes de aceitar um candidato: build locked, testes Rust do módulo, igualdade de
 schemas App Server com o pacote instalado, falhas do provedor, substituição Jev,
@@ -57,6 +64,9 @@ Há um único cache de compilação serializado. Os executáveis aceitos são c�
 separadas, preservando processos em andamento. Um ponteiro é gravado por rename
 somente após validação e nova leitura do pacote instalado. A aceitação anterior
 é registrada para diagnóstico; não é reativada automaticamente após um upgrade.
+Cada runtime tem também seu próprio script helper: uma atualização não reescreve
+o helper de um processo anterior. App/CLI já abertos seguem com seu motor até
+serem encerrados e reabertos; não há troca de executável durante uma conversa.
 
 Se a versão nova não aceitar o patch, o source/tag não existir, um teste falhar ou
 houver falta de memória/runtime, o candidato fica inativo. A falha é registrada
