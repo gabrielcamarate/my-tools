@@ -13,6 +13,8 @@ O gestor não participa das chamadas do agente. Não há proxy, cadastro de chav
 
 `plugins.json` registra a fonte aceita do plugin Codex. Para Jev Pruner, a fonte é compilada com npm e vinculada em `plugins/jev-pruner`. A integração registra o marketplace local e o plugin oficial; o cache é reinstalado a cada troca de SHA. O gestor confere o cache e restaura a versão anterior em falhas recuperáveis. Não registra MCP ou inventa chamadas para o Pruner.
 
+`claude-plugins.json` registra a fonte aceita do Fast Jev Compaction. A integração usa os comandos oficiais `claude plugin marketplace add`/`install` sobre a fonte gerenciada, confere o cache instalado e só acrescenta a flag de function hooks em `~/.claude/settings.json`, preservando hooks existentes.
+
 ## Acrescentar uma ferramenta
 
 1. Definir tarefa, baseline e critério de aceite.

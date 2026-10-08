@@ -369,6 +369,17 @@
           "tests/test_v02.py"
         ]
       }
+    },
+    "fast-jev-compaction": {
+      "repository": "https://github.com/tamaratran/fast-jev-compaction.git",
+      "branch": "main",
+      "approved_commit": "e3f262a7f4d42bd8dd32ced30d26176f7cb545b0",
+      "status": "experimental",
+      "license": "MIT",
+      "credential_environment": [
+        "OPENROUTER_API_KEY"
+      ],
+      "installer": "fast-jev-compaction-source-v1"
     }
   }
 }

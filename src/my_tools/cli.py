@@ -23,7 +23,7 @@ def parser():
     sub = commands.add_parser("repair")
     sub.add_argument("tool")
     sub = commands.add_parser("integrate")
-    sub.add_argument("tool", choices=["siftr", "jev-pruner", "jev-test-filter", "jev-browser", "jeval", "jev-calibrate", "jev-axi", "jev-recipes", "tocsin", "docjev", "jev-spec", "jev-oas-sentinel", "hunch", "snifftest", "semdecide"])
+    sub.add_argument("tool", choices=["siftr", "jev-pruner", "jev-test-filter", "jev-browser", "jeval", "jev-calibrate", "jev-axi", "jev-recipes", "tocsin", "docjev", "jev-spec", "jev-oas-sentinel", "hunch", "snifftest", "semdecide", "fast-jev-compaction"])
     sub.add_argument("--apply", action="store_true")
     sub.add_argument("--bin-dir", type=Path)
     for name in ("outdated", "update"):
@@ -60,6 +60,8 @@ def main(argv=None):
         if args.command == "integrate":
             if args.tool == "jev-pruner":
                 from .plugins import integrate
+            elif args.tool == "fast-jev-compaction":
+                from .compaction import integrate
             elif args.tool != "siftr":
                 from .commands import integrate
             else:

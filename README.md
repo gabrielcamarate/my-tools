@@ -13,6 +13,7 @@ O controlador usa Python 3.11+ e biblioteca padrão; Linux é o alvo validado. R
 | [Jeval](https://github.com/rlaope/jeval) | CLI `jeval` e seis skills upstream | Experimental: avaliação offline de decisões rotuladas; sem chave, hooks ou MCP |
 | [Siftr](https://github.com/Bentlybro/siftr) | CLI `siftr` e MCP oficial `siftr mcp` | Experimental; quatro ferramentas disponíveis |
 | [Jev Pruner](https://github.com/tamaratran/jev-pruner) | Plugin/skill oficial Codex e wrapper upstream | Experimental: OpenRouter, engine upstream preservado e poda live verificada |
+| [Fast Jev Compaction](https://github.com/tamaratran/fast-jev-compaction) | Plugin oficial Claude Code (function hooks `session.compact`) | Experimental: OpenRouter, motor upstream preservado; live sintético e fallback verificados fora do motor; rollout remoto pendente. Veja [docs](docs/fast-jev-compaction.md) |
 | [Jev Test Filter](https://github.com/mizchi/jev-test-filter) | CLI `jev-test-filter` e skill upstream | Experimental: seleção live via OpenRouter, preservando gates finais |
 | [Jev Browser](https://github.com/tontoko/jev-browser) | CLI `jev-browser`, MCP `jev-browser-mcp` e skill upstream | Experimental: Chromium isolado, OpenRouter e gravação/readback live verificados |
 

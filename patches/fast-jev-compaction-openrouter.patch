@@ -1,0 +1,224 @@
+diff --git i/.claude-plugin/plugin.json w/.claude-plugin/plugin.json
+index fdb472f..59dd35b 100644
+--- i/.claude-plugin/plugin.json
++++ w/.claude-plugin/plugin.json
+@@ -6,8 +6,8 @@
+   "userConfig": {
+     "apiKey": {
+       "type": "string",
+-      "title": "TypeSafe API key",
+-      "description": "TypeSafe API key. Leave unset to use TYPESAFE_API_KEY.",
++      "title": "OpenRouter API key",
++      "description": "OpenRouter API key. Leave unset to use OPENROUTER_API_KEY or ~/.config/siftr/.env.",
+       "sensitive": true
+     },
+     "keepThreshold": {
+@@ -55,8 +55,8 @@
+     "model": {
+       "type": "string",
+       "title": "Jev model",
+-      "description": "TypeSafe Jev model name.",
+-      "default": "jev-latest"
++      "description": "Jev model name on the OpenRouter Decisions API.",
++      "default": "typesafe/jev-1.13"
+     }
+   }
+ }
+diff --git i/hooks/README.md w/hooks/README.md
+index b5944e3..9c2aa16 100644
+--- i/hooks/README.md
++++ w/hooks/README.md
+@@ -55,7 +55,7 @@ The plugin declares these `userConfig` values in
+ | `maxStateTokens` | `25000` |
+ | `maxRequestTokens` | `30000` |
+ | `truncateHeadChars` | `300` |
+-| `model` | `jev-latest` |
++| `model` | `typesafe/jev-1.13` |
+ 
+ The TypeSafe key can be supplied as the sensitive `apiKey` plugin option or
+ through `TYPESAFE_API_KEY`. The environment variable is the recommended
+@@ -86,3 +86,13 @@ References:
+ - [Claude Code plugins](https://code.claude.com/docs/en/plugins)
+ - [Claude Code plugins reference](https://code.claude.com/docs/en/plugins-reference)
+ - [Claude Code hooks](https://code.claude.com/docs/en/hooks)
++
++## OpenRouter provider (my-tools)
++
++My Tools sends the same typed `state`/`questions` to the OpenRouter Decisions
++API (`https://openrouter.ai/api/alpha/decisions`, model `typesafe/jev-1.13`).
++The key is the `apiKey` option, else `OPENROUTER_API_KEY`, else the private
++`~/.config/siftr/.env`; an explicitly empty variable disables the file. The
++compaction engine, thresholds, parser and fallback stay upstream. Compaction
++sends the session history to this provider: use it only where that history is
++authorized for external processing.
+diff --git i/hooks/fast-jev.ts w/hooks/fast-jev.ts
+index cd894e2..4b608b0 100644
+--- i/hooks/fast-jev.ts
++++ w/hooks/fast-jev.ts
+@@ -9,7 +9,7 @@ import type {
+ } from 'claude-code';
+ 
+ import { compact, reductionRatio, resolveOptions } from '../src/compact.js';
+-import { buildJevRequest, DEFAULT_MODEL, parseJevResponse } from '../src/request.js';
++import { buildJevRequest, parseJevResponse } from '../src/request.js';
+ import type {
+   CompactOptions,
+   CompactResult,
+@@ -19,10 +19,14 @@ import type {
+   ToolUse,
+ } from '../src/types.js';
+ 
++// Provider-only integration maintained by my-tools; compaction stays upstream.
++export const OPENROUTER_DECISIONS_URL = 'https://openrouter.ai/api/alpha/decisions';
++export const OPENROUTER_MODEL = 'typesafe/jev-1.13';
++
+ const HOOK_DEFAULTS = {
+   compactAtPercent: 60,
+   minReductionRatio: 0.25,
+-  model: DEFAULT_MODEL,
++  model: OPENROUTER_MODEL,
+ };
+ 
+ export type HookFetchInit = {
+@@ -91,7 +95,7 @@ export function resolveHookConfig(options: PluginOptions): HookConfig {
+ export function jevAsker(fetchFn: HookFetch, apiKey: string, model: string): JevAsker {
+   return {
+     async ask(state, questions) {
+-      const request = buildJevRequest({ apiKey, model }, state, questions);
++      const request = buildJevRequest({ apiKey, model, baseUrl: OPENROUTER_DECISIONS_URL }, state, questions);
+       const response = await fetchFn(request.url, {
+         method: request.method,
+         headers: request.headers,
+@@ -167,7 +171,7 @@ export async function compactSession(
+   config: HookConfig,
+   fetchFn: HookFetch,
+ ): Promise<SessionCompaction> {
+-  if (!config.apiKey) throw new Error('TYPESAFE_API_KEY is not configured');
++  if (!config.apiKey) throw new Error('OPENROUTER_API_KEY is not configured');
+   const result = await compact(messages, jevAsker(fetchFn, config.apiKey, config.model), config);
+   return { result, messages: toSessionMessages(messages, result.messages) };
+ }
+@@ -224,23 +228,38 @@ export function decisionLogLines(
+   );
+ }
+ 
+-async function getApiKey(
++/** The value of OPENROUTER_API_KEY in a dotenv text, or undefined. */
++export function dotenvKey(text: string): string | undefined {
++  for (const line of text.split('\n')) {
++    const match = /^\s*(?:export\s+)?OPENROUTER_API_KEY\s*=\s*(.*?)\s*$/.exec(line);
++    if (!match) continue;
++    const value = match[1] ?? '';
++    if (value.startsWith('"') && value.endsWith('"')) return value.slice(1, -1) || undefined;
++    if (value.startsWith("'") && value.endsWith("'")) return value.slice(1, -1) || undefined;
++    return (value.split(/\s+#/)[0] ?? '').trim() || undefined;
++  }
++  return undefined;
++}
++
++export async function getApiKey(
+   $: {
+     env: { get: (name: string) => Promise<string | undefined> };
+-    settings: { read: () => Promise<Readonly<Record<string, unknown>>> };
++    fs: { read: (path: string) => Promise<string> };
+   },
+   config: HookConfig,
+ ): Promise<string | undefined> {
+   if (config.apiKey) return config.apiKey;
+-  const fromEnv = await $.env.get('TYPESAFE_API_KEY');
+-  if (fromEnv) return fromEnv;
+-  const settings = await $.settings.read();
+-  const env = settings['env'];
+-  if (env && typeof env === 'object') {
+-    const value = (env as Record<string, unknown>)['TYPESAFE_API_KEY'];
+-    if (typeof value === 'string' && value) return value;
++  const fromEnv = await $.env.get('OPENROUTER_API_KEY');
++  // An explicit empty value disables the personal-file fallback.
++  if (fromEnv !== undefined) return fromEnv || undefined;
++  const home = await $.env.get('HOME');
++  if (!home) return undefined;
++  try {
++    // Reuse Siftr's private personal credential; never read a project's .env.
++    return dotenvKey(await $.fs.read(`${home}/.config/siftr/.env`));
++  } catch {
++    return undefined;
+   }
+-  return undefined;
+ }
+ 
+ function notify(
+diff --git i/tests/hook.test.ts w/tests/hook.test.ts
+index 84e60fe..f107ecc 100644
+--- i/tests/hook.test.ts
++++ w/tests/hook.test.ts
+@@ -53,7 +53,7 @@ function jevFetch(answer: (name: string) => number, bodies: string[] = []) {
+ 
+ describe('hook config', () => {
+   it('reads userConfig values and falls back to defaults', () => {
+-    expect(resolveHookConfig({})).toEqual({ compactAtPercent: 60, minReductionRatio: 0.25, model: 'jev-latest' });
++    expect(resolveHookConfig({})).toEqual({ compactAtPercent: 60, minReductionRatio: 0.25, model: 'typesafe/jev-1.13' });
+     expect(
+       resolveHookConfig({ apiKey: 'k', keepThreshold: 0.3, maxStateTokens: 1000, model: 'jev-x', goal: 'g', compactAtPercent: 'no' }),
+     ).toEqual({
+@@ -141,7 +141,7 @@ describe('compactSession', () => {
+ 
+   it('throws on a missing key and on failed requests so the hook falls back', async () => {
+     const config = resolveHookConfig({ preserveRecentMessages: 1 });
+-    await expect(compactSession(transcript(), config, jevFetch(() => 0))).rejects.toThrow(/TYPESAFE_API_KEY/);
++    await expect(compactSession(transcript(), config, jevFetch(() => 0))).rejects.toThrow(/OPENROUTER_API_KEY/);
+     await expect(
+       compactSession(transcript(), { ...config, apiKey: 'k' }, async () => ({ status: 500, ok: false, text: 'x' })),
+     ).rejects.toThrow(/500/);
+diff --git i/tests/openrouter-provider.test.ts w/tests/openrouter-provider.test.ts
+new file mode 100644
+index 0000000..978fe88
+--- /dev/null
++++ w/tests/openrouter-provider.test.ts
+@@ -0,0 +1,47 @@
++import { describe, expect, it } from 'vitest';
++
++import { dotenvKey, getApiKey, jevAsker, OPENROUTER_DECISIONS_URL, resolveHookConfig } from '../hooks/fast-jev.js';
++
++function host(env: Record<string, string | undefined>, files: Record<string, string> = {}) {
++  return {
++    env: { get: async (name: string) => env[name] },
++    fs: {
++      read: async (path: string) => {
++        if (!(path in files)) throw new Error('ENOENT');
++        return files[path];
++      },
++    },
++  };
++}
++
++describe('OpenRouter provider', () => {
++  it('sends the typed request to the Decisions API', async () => {
++    let url = '';
++    let body: Record<string, unknown> = {};
++    let headers: Record<string, string> = {};
++    const asker = jevAsker(async (target, init) => {
++      url = target;
++      body = JSON.parse(init?.body ?? '{}');
++      headers = init?.headers ?? {};
++      return { status: 200, ok: true, text: '{"answers":{"q":{"noul":0.9}}}' };
++    }, 'synthetic', resolveHookConfig({}).model);
++    const response = await asker.ask({ text: 'state' } as never, { q: { type: 'noul', instructions: 'keep?' } } as never);
++    expect(url).toBe(OPENROUTER_DECISIONS_URL);
++    expect(headers.authorization).toBe('Bearer synthetic');
++    expect(body.model).toBe('typesafe/jev-1.13');
++    expect(Object.keys(body).sort()).toEqual(['model', 'questions', 'state']);
++    expect(response.answers.q).toEqual({ noul: 0.9 });
++  });
++
++  it('reads the key from the option, the variable, then the private Siftr file', async () => {
++    const files = { '/h/.config/siftr/.env': 'OTHER=1\nexport OPENROUTER_API_KEY="from-file"\n' };
++    const config = resolveHookConfig({});
++    expect(await getApiKey(host({ HOME: '/h' }, files), { ...config, apiKey: 'option' })).toBe('option');
++    expect(await getApiKey(host({ HOME: '/h', OPENROUTER_API_KEY: 'from-env' }, files), config)).toBe('from-env');
++    expect(await getApiKey(host({ HOME: '/h' }, files), config)).toBe('from-file');
++    expect(await getApiKey(host({ HOME: '/h', OPENROUTER_API_KEY: '' }, files), config)).toBeUndefined();
++    expect(await getApiKey(host({ HOME: '/h' }), config)).toBeUndefined();
++    expect(dotenvKey("OPENROUTER_API_KEY='x'")).toBe('x');
++    expect(dotenvKey('OPENROUTER_API_KEY=y # c')).toBe('y');
++  });
++});
