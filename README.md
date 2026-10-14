@@ -2,6 +2,8 @@
 
 [![Validate](https://github.com/gabrielcamarate/my-tools/actions/workflows/validate.yml/badge.svg)](https://github.com/gabrielcamarate/my-tools/actions/workflows/validate.yml)
 
+> **Congelado desde 14/10/2026.** Nenhuma ferramenta nova será integrada, e as atuais estão desligadas nas sessões padrão do Claude e do Codex. Uma ferramenta volta quando houver uma dor medida num projeto real, e volta no escopo desse projeto. Decisão: `Gabriel-OS/decisions/log.md`.
+
 Gestor de ferramentas oficiais para Codex e Claude: origem, SHA aceito, instalação, atualização e recuperação. O agente usa os comandos e MCPs do próprio fornecedor. O [my-skills](https://github.com/gabrielcamarate/my-skills) orienta quando usá-los. Não criamos nomes de operações próprios para substituir as ferramentas.
 
 O controlador usa Python 3.11+ e biblioteca padrão; Linux é o alvo validado. Regras e autorizações continuam pertencendo ao consumidor.
